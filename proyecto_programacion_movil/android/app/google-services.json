@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "289717582237",
+    "project_id": "asistente-883d3",
+    "storage_bucket": "asistente-883d3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:289717582237:android:20b581d04014e449c29774",
+        "android_client_info": {
+          "package_name": "com.example.proyecto_programacion_movil"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTOSiksdcXCBQpu_UGirnxMuvI_0yuGE8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
