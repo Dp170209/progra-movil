@@ -20,11 +20,18 @@ Map<String, dynamic> toJson() => {
 
 
 factory Recordatorio.fromJson(String id, Map<String, dynamic> json) {
-  return Recordatorio(
-    id: id, 
-    titulo: json['titulo'] ?? '',
-    fechaHora: DateTime.parse(json['fechaHora']),
-    uid: json['uid'] ?? '',
-  );
+  try {
+    final fechaRaw = json['fechaHora'];
+
+    return Recordatorio(
+      id: id,
+      titulo: json['titulo'] ?? '',
+      fechaHora: DateTime.parse(fechaRaw), // Esto puede fallar si está mal formateado
+      uid: json['uid'] ?? '',
+    );
+  } catch (e) {
+    rethrow;
+  }
 }
+
 }

@@ -25,9 +25,6 @@ class PantallaRecordatorios extends StatelessWidget {
                     return const Center(child: CircularProgressIndicator());
                   }
                   final lista = snapshot.data ?? [];
-                  print('👤 UID actual: ${FirebaseAuth.instance.currentUser?.uid}');
-                  print('📥 Documentos recibidos: ${lista.length}');
-
                   if (lista.isEmpty) {
                     return const Center(
                       child: Text('No tienes recordatorios aún.'),
@@ -40,11 +37,14 @@ class PantallaRecordatorios extends StatelessWidget {
                       return ListTile(
                         title: Text(r.titulo),
                         subtitle: Text(
-                          '${r.fechaHora.toLocal()}'.split('.')[0],
+                          '${r.fechaHora.toLocal()}'.split('.')[0] +
+                              ' — ${calcularTiempoRestante(r.fechaHora)}',
                         ),
+
                         trailing: IconButton(
                           icon: const Icon(Icons.delete),
-                          onPressed: () => gestor.eliminar(r.id),
+                          onPressed:
+                              () => _confirmarBorrado(context, gestor, r),
                         ),
                         onTap: () => _editarDialog(context, gestor, r),
                       );
@@ -89,22 +89,22 @@ class PantallaRecordatorios extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () async {
                     final ahora = DateTime.now();
-                    seleccionada = await showDatePicker(
+                    final fecha = await showDatePicker(
                       context: context,
                       initialDate: ahora,
                       firstDate: ahora,
                       lastDate: DateTime(2100),
                     );
-                    if (seleccionada != null) {
+                    if (fecha != null) {
                       final hora = await showTimePicker(
                         context: context,
                         initialTime: TimeOfDay.now(),
                       );
                       if (hora != null) {
                         seleccionada = DateTime(
-                          seleccionada!.year,
-                          seleccionada!.month,
-                          seleccionada!.day,
+                          fecha.year,
+                          fecha.month,
+                          fecha.day,
                           hora.hour,
                           hora.minute,
                         );
@@ -122,16 +122,35 @@ class PantallaRecordatorios extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () {
-                  if (tituloCtrl.text.isNotEmpty && seleccionada != null) {
-                    final nuevo = Recordatorio(
-                      id: '',
-                      titulo: tituloCtrl.text,
-                      fechaHora: seleccionada!,
-                      uid: FirebaseAuth.instance.currentUser!.uid,
+                  final titulo = tituloCtrl.text.trim();
+                  if (titulo.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('⚠️ El título no puede estar vacío'),
+                      ),
                     );
-                    gestor.agregar(nuevo);
-                    Navigator.pop(context);
+                    return;
                   }
+                  if (seleccionada == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('⚠️ Debes seleccionar fecha y hora'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  final nuevo = Recordatorio(
+                    id: '',
+                    titulo: titulo,
+                    fechaHora: seleccionada!,
+                    uid: FirebaseAuth.instance.currentUser!.uid,
+                  );
+                  gestor.agregar(nuevo);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text(' Recordatorio guardado')),
+                  );
                 },
                 child: const Text('Guardar'),
               ),
@@ -171,6 +190,7 @@ class PantallaRecordatorios extends StatelessWidget {
                     );
                     if (nuevaFecha != null) {
                       final hora = await showTimePicker(
+                        // ignore: use_build_context_synchronously
                         context: context,
                         initialTime: TimeOfDay.fromDateTime(seleccionada),
                       );
@@ -196,19 +216,87 @@ class PantallaRecordatorios extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () {
+                  final titulo = tituloCtrl.text.trim();
+                  if (titulo.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(' El título no puede estar vacío'),
+                      ),
+                    );
+                    return;
+                  }
+
                   final actualizado = Recordatorio(
                     id: r.id,
-                    titulo: tituloCtrl.text,
+                    titulo: titulo,
                     fechaHora: seleccionada,
                     uid: r.uid,
                   );
                   gestor.editar(actualizado);
                   Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Recordatorio actualizado')),
+                  );
                 },
                 child: const Text('Actualizar'),
               ),
             ],
           ),
     );
+  }
+
+  void _confirmarBorrado(
+    BuildContext context,
+    GestorRecordatorios gestor,
+    Recordatorio r,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('¿Eliminar recordatorio?'),
+            content: Text('Se eliminará "${r.titulo}". ¿Deseas continuar?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () {
+                  gestor.eliminar(r.id);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('🗑 Recordatorio eliminado')),
+                  );
+                },
+                child: const Text(
+                  'Eliminar',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  String calcularTiempoRestante(DateTime fecha) {
+    final ahora = DateTime.now();
+    final diferencia = fecha.difference(ahora);
+
+    if (diferencia.isNegative) {
+      return '⏰ Ya vencido';
+    }
+
+    final dias = diferencia.inDays;
+    final horas = diferencia.inHours % 24;
+    final minutos = diferencia.inMinutes % 60;
+
+    if (dias > 0) {
+      return 'En $dias día${dias > 1 ? 's' : ''} y $horas h';
+    } else if (horas > 0) {
+      return 'En $horas h y $minutos min';
+    } else {
+      return 'En $minutos min';
+    }
   }
 }

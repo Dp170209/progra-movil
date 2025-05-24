@@ -7,19 +7,14 @@ class RepositorioRecordatorios {
 Stream<List<Recordatorio>> obtenerRecordatorios(String uid) {
   return _ref.where('uid', isEqualTo: uid).snapshots().map(
     (snapshot) {
-      print('📦 Firestore envió ${snapshot.docs.length} documentos.');
-      for (final doc in snapshot.docs) {
-        print('📝 Doc: ${doc.id} => ${doc.data()}');
-      }
 
       return snapshot.docs.map((doc) {
         try {
           return Recordatorio.fromJson(doc.id, doc.data());
         } catch (e) {
-          print('❌ Error al parsear recordatorio: ${doc.id} – $e');
           return null;
         }
-      }).whereType<Recordatorio>().toList(); // Filtra los null
+      }).whereType<Recordatorio>().toList(); 
     },
   );
 }
@@ -35,7 +30,8 @@ Stream<List<Recordatorio>> obtenerRecordatorios(String uid) {
     await _ref.doc(id).delete();
   }
 
-  Future<void> editarRecordatorio(Recordatorio recordatorio) async {
-    await _ref.doc(recordatorio.id).set(recordatorio.toJson());
-  }
+ Future<void> editarRecordatorio(Recordatorio recordatorio) async {
+  await _ref.doc(recordatorio.id).update(recordatorio.toJson());
+}
+
 }
