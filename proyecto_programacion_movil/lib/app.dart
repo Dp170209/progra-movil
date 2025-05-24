@@ -1,6 +1,7 @@
-// lib/app.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:proyecto_programacion_movil/pantallas/pantalla_recordatorio.dart';
 
 // Pantallas
 import 'pantallas/pantalla_login.dart';
@@ -15,17 +16,28 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SmartRemind AI',
+      locale: const Locale('es'), // Establece idioma español
+      supportedLocales: const [
+        Locale('es'), // Español
+        Locale('en'), // Inglés (por compatibilidad)
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         primarySwatch: Colors.teal,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       initialRoute: '/',
       routes: {
-        '/':              (_) => const _AuthWrapper(),
-        '/login':         (_) => const PantallaLogin(),
-        '/registro':      (_) => const PantallaRegistro(),
+        '/':               (_) => const _AuthWrapper(),
+        '/login':          (_) => const PantallaLogin(),
+        '/registro':       (_) => const PantallaRegistro(),
         '/registro-facial':(_) => const PantallaRegistroFacial(),
-        '/home':          (_) => const PantallaInicio(),
+        '/home':           (_) => const PantallaInicio(),
+        '/recordatorios':  (_) => const PantallaRecordatorios(),
       },
     );
   }

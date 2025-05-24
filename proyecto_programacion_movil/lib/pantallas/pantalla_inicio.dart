@@ -1,6 +1,6 @@
-// lib/pantallas/pantalla_inicio.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PantallaInicio extends StatelessWidget {
   const PantallaInicio({super.key});
@@ -28,9 +28,11 @@ class PantallaInicio extends StatelessWidget {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.access_time),
+              leading: const Icon(Icons.notifications),
               title: const Text('Recordatorios'),
-              onTap: () => Navigator.pushNamed(context, '/recordatorios'),
+              onTap: () {
+                Navigator.pushNamed(context, '/recordatorios');
+              },
             ),
             ListTile(
               leading: const Icon(Icons.mood),
@@ -52,7 +54,6 @@ class PantallaInicio extends StatelessWidget {
               leading: const Icon(Icons.logout),
               title: const Text('Cerrar sesión'),
               onTap: () {
-                // No await para evitar 'use_build_context_synchronously'
                 FirebaseAuth.instance.signOut();
                 Navigator.pushReplacementNamed(context, '/login');
               },
@@ -72,12 +73,44 @@ class PantallaInicio extends StatelessWidget {
             ElevatedButton.icon(
               icon: const Icon(Icons.list),
               label: const Text('Ver mis recordatorios'),
-              onPressed: () =>
-                  Navigator.pushNamed(context, '/recordatorios'),
+              onPressed: () => Navigator.pushNamed(context, '/recordatorios'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.cloud_done),
+              label: const Text('Probar conexión a Firestore'),
+              onPressed: () async {
+                final mensaje = await _testFirestore();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(mensaje)),
+                  );
+                }
+              },
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<String> _testFirestore() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('prueba')
+          .doc('conexion')
+          .get();
+
+      if (doc.exists) {
+        print('✅ Firestore conectado: ${doc.data()}');
+        return '✅ Conexión exitosa con Firestore.';
+      } else {
+        print('⚠️ Documento no encontrado.');
+        return '⚠️ Conectado, pero el documento no existe.';
+      }
+    } catch (e) {
+      print('❌ Error de conexión con Firestore: $e');
+      return '❌ Error de conexión: ${e.toString()}';
+    }
   }
 }
