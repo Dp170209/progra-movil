@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:proyecto_programacion_movil/pantallas/pantalla_crear_recordatorio.dart';
 import 'package:proyecto_programacion_movil/pantallas/pantalla_recordatorio.dart';
 
 // Pantallas
@@ -41,7 +42,14 @@ class MainApp extends StatelessWidget {
         '/home': (_) => const PantallaInicio(),
         '/recordatorios': (_) => const PantallaRecordatorios(),
         '/sugerencias': (_) => const PantallaSugerencias(),
-        '/resumen': (_) => const PantallaResumen(),     // ← aquí
+        '/resumen': (_) => const PantallaResumen(),
+        '/crearRecordatorio': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>?;
+          final sugerenciaHora = args?['sugerenciaHora'] as int?;
+          return PantallaCrearRecordatorio(sugerenciaHora: sugerenciaHora);
+        },
       },
     );
   }
