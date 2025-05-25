@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:proyecto_programacion_movil/repositorios/repositorio_habito.dart';
 import '../gestores/gestor_recordatorios.dart';
 import '../modelos/recordatorio.dart';
-import '../servicios/servicio_dialogflow.dart';
-import '../repositorios/repositorio_habito.dart';
+import '../servicios/servicio_openai.dart';
 
 class PantallaRecordatorios extends StatelessWidget {
   const PantallaRecordatorios({super.key});
@@ -33,8 +33,17 @@ class PantallaRecordatorios extends StatelessWidget {
                     itemCount: lista.length,
                     itemBuilder: (context, index) {
                       final r = lista[index];
+                      final esCompletado = r.estado == 'completado';
                       return ListTile(
-                        title: Text(r.titulo),
+                        title: Text(
+                          r.titulo,
+                          style: TextStyle(
+                            decoration:
+                                esCompletado
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                          ),
+                        ),
                         subtitle: Text(
                           '${r.fechaHora.toLocal()}'.split('.')[0] +
                               ' — ${calcularTiempoRestante(r.fechaHora)}',
@@ -42,25 +51,43 @@ class PantallaRecordatorios extends StatelessWidget {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Botón “Hecho”
                             IconButton(
-                              icon: const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
+                              icon: Icon(
+                                esCompletado
+                                    ? Icons.check_circle_outline
+                                    : Icons.check_circle,
+                                color:
+                                    esCompletado ? Colors.grey : Colors.green,
                               ),
-                              tooltip: 'Marcar como hecho',
+                              tooltip:
+                                  esCompletado
+                                      ? 'Marcar como pendiente'
+                                      : 'Marcar como completado',
                               onPressed: () async {
-                                await RepositorioHabitos().registrarHabito(
-                                  r.id,
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('✅ Hábito registrado'),
-                                  ),
-                                );
+                                // Alterna el estado en Firestore
+                                await gestor.alternarEstado(r);
+                                if (!esCompletado) {
+                                  // Si acabamos de marcar completado, registramos el hábito
+                                  await RepositorioHabitos().registrarHabito(
+                                    r.id,
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('✅ Hábito registrado'),
+                                    ),
+                                  );
+                                } else {
+                                  // Si revertimos a pendiente
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        '🔄 Marcado como pendiente',
+                                      ),
+                                    ),
+                                  );
+                                }
                               },
                             ),
-                            // Botón “Borrar”
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               tooltip: 'Eliminar',
@@ -81,12 +108,14 @@ class PantallaRecordatorios extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               FloatingActionButton.extended(
+                heroTag: 'fab_texto',
                 icon: const Icon(Icons.auto_mode),
                 label: const Text('Texto Inteligente'),
                 onPressed: () => _crearPorTexto(context),
               ),
               const SizedBox(height: 10),
               FloatingActionButton(
+                heroTag: 'fab_agregar',
                 child: const Icon(Icons.add),
                 onPressed: () {
                   final gestor = Provider.of<GestorRecordatorios>(
@@ -225,12 +254,10 @@ class PantallaRecordatorios extends StatelessWidget {
 
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('⏳ Procesando con Dialogflow...'),
-                    ),
+                    const SnackBar(content: Text('⏳ Procesando con OpenAI...')),
                   );
 
-                  final json = await ServicioDialogflow.instance.procesarFrase(
+                  final json = await ServicioOpenAI.instance.procesarFrase(
                     texto,
                   );
                   if (json == null ||
@@ -245,12 +272,14 @@ class PantallaRecordatorios extends StatelessWidget {
                   }
 
                   try {
-                    final fechaRaw = json['fecha']?[0];
-                    final titulo = json['titulo']?[0];
+                    final fechaRaw = json['fecha'];
+                    final titulo = json['titulo'];
 
                     if (fechaRaw == null || titulo == null) throw Exception();
 
-                    final fecha = DateTime.parse(fechaRaw);
+                    final fechaUtc = DateTime.parse(fechaRaw);
+                    final fecha = fechaUtc.toLocal();
+
                     final nuevo = Recordatorio(
                       id: '',
                       titulo: titulo,

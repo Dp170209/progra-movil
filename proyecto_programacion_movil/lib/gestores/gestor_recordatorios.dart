@@ -25,4 +25,17 @@ class GestorRecordatorios extends ChangeNotifier {
     await _repo.editarRecordatorio(r);
     notifyListeners();
   }
+
+  Future<void> marcarComoCompletado(Recordatorio r) async {
+    final actualizado = r.copyWith(estado: 'completado');
+    await _repo.editarRecordatorio(actualizado);
+    notifyListeners();
+  }
+
+  Future<void> alternarEstado(Recordatorio r) async {
+    final nuevoEstado = r.estado == 'pendiente' ? 'completado' : 'pendiente';
+    final actualizado = r.copyWith(estado: nuevoEstado);
+    await _repo.editarRecordatorio(actualizado);
+    notifyListeners();
+  }
 }
