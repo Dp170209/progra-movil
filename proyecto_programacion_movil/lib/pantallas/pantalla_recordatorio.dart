@@ -3,8 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../gestores/gestor_recordatorios.dart';
 import '../modelos/recordatorio.dart';
-import '../servicios/servicio_dialogflow.dart'; // <-- el nuevo archivo que usa HTTP
-
+import '../servicios/servicio_openai.dart'; 
 
 class PantallaRecordatorios extends StatelessWidget {
   const PantallaRecordatorios({super.key});
@@ -53,23 +52,26 @@ class PantallaRecordatorios extends StatelessWidget {
             },
           ),
           floatingActionButton: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FloatingActionButton.extended(
-                icon: const Icon(Icons.auto_mode),
-                label: const Text('Texto Inteligente'),
-                onPressed: () => _crearPorTexto(context),
-              ),
-              const SizedBox(height: 10),
-              FloatingActionButton(
-                child: const Icon(Icons.add),
-                onPressed: () {
-                  final gestor = Provider.of<GestorRecordatorios>(context, listen: false);
-                  _crearDialog(context, gestor);
-                },
-              ),
-            ],
-          ),
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    FloatingActionButton.extended(
+      heroTag: 'fab_texto',
+      icon: const Icon(Icons.auto_mode),
+      label: const Text('Texto Inteligente'),
+      onPressed: () => _crearPorTexto(context),
+    ),
+    const SizedBox(height: 10),
+    FloatingActionButton(
+      heroTag: 'fab_agregar',
+      child: const Icon(Icons.add),
+      onPressed: () {
+        final gestor = Provider.of<GestorRecordatorios>(context, listen: false);
+        _crearDialog(context, gestor);
+      },
+    ),
+  ],
+),
+
         );
       },
     );
@@ -169,7 +171,7 @@ class PantallaRecordatorios extends StatelessWidget {
     );
   }
 
- void _crearPorTexto(BuildContext context) {
+void _crearPorTexto(BuildContext context) {
   final ctrl = TextEditingController();
 
   showDialog(
@@ -194,10 +196,10 @@ class PantallaRecordatorios extends StatelessWidget {
 
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('⏳ Procesando con Dialogflow...')),
+              const SnackBar(content: Text('⏳ Procesando con OpenAI...')),
             );
 
-            final json = await ServicioDialogflow.instance.procesarFrase(texto);
+            final json = await ServicioOpenAI.instance.procesarFrase(texto);
             if (json == null || !json.containsKey('titulo') || !json.containsKey('fecha')) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('❌ No se entendió el mensaje')),
@@ -206,19 +208,21 @@ class PantallaRecordatorios extends StatelessWidget {
             }
 
             try {
-              final fechaRaw = json['fecha']?[0];
-final titulo = json['titulo']?[0];
+              final fechaRaw = json['fecha'];
+final titulo = json['titulo'];
 
-if (fechaRaw == null || titulo == null) throw Exception();
 
-final fecha = DateTime.parse(fechaRaw);
-final nuevo = Recordatorio(
-  id: '',
-  titulo: titulo,
-  fechaHora: fecha,
-  uid: FirebaseAuth.instance.currentUser!.uid,
-);
+              if (fechaRaw == null || titulo == null) throw Exception();
 
+              final fechaUtc = DateTime.parse(fechaRaw);
+              final fecha = fechaUtc.toLocal();
+
+              final nuevo = Recordatorio(
+                id: '',
+                titulo: titulo,
+                fechaHora: fecha,
+                uid: FirebaseAuth.instance.currentUser!.uid,
+              );
 
               final gestor = Provider.of<GestorRecordatorios>(context, listen: false);
               gestor.agregar(nuevo);
