@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "smart-reminders-ueys",
+  "private_key_id": "5d947c48df7b1a049065f95cbf1ce0fd1a1b944d",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDQNMp92CQk0yBF\nzBJz/f+VCyPD4ns2jl7QZLUvFLdfll2rd95mnEcVUBZSp/e920+QIdG4qTMYyIVS\nRhIifOYpqOpsXOOU84kV3cxRBhOA48icMNjJpgV1qPcvHAPSnGgSpYy8lwPmX+6D\ndcXrRoY7AZ7xhyaInGgN2oPfAhm79eU613ti9bwC3ZhC7BjrUqCaVDFjLlh8BSh4\nwlzIygoL4kaHQypottWneqm8AwHqJWPMOIntjNjJF8GNVN3Hkn/vwjxzGJwkD9UD\nE2cGLkTrB7vgCZyp49n8C+VEz4pYdKBq34+a9t2VwCO6vwTmYDV/4EWPiXtE8mX5\nJ6pOScCfAgMBAAECggEAWGNw60fM4E040Ci4VMGptO5Luqb1Q83g9nsqZ9hVmKDP\nFzIGGm2Rx7x+HYztIY5vEnMpA0nhRU4rOyhAHqADXgA1tNciTmOs+Ll2OZdoxDjv\nO0+JWOHAQ5j9huRPwyNfEztwqcc6gpyLNwfSg/UmmvovLb4AX9J2Yhs4DH5pyl7v\nXM7WfAt37JPAz3ysjZ1gTOeD7ILq7L25zJvh+gxPgez3bO4Em1D4gHxzW0DpHZ+v\ni+3FYWFBDHrup/Q0eFnuDOvzgEqJ6sFjAvW5ieTtF9prAn8q/CCr+wNlPY10bwm8\nAQmEcNpLBcKK3tNKUybaASZlyvaA62ZFlZ2Wkaov4QKBgQDtrfPFeGyzhfudK1CG\n8I8mORxaH9jTJUsUjrXBNKl2tIFd+VsqC9/9wgYm4bomd4wm7GQJ38IAP8fRQccq\naELnm8DR5KK3RE46t00ECXyk2jEJHyAd+1mM0MA4UmU9EBGCfawnCxaV3M362ZZh\nfPpOOWkzUwhRbf2P1+N9HtK4NwKBgQDgQUCmmNPlSHTXDF5OqOi1HlzgvXvEUOMh\nFmcWo1yu0Ht85kNDwm0Q99Sl976vsxMEH7sE0ZwUpF1J3w/JFRbRqcMZzZ5EhPa3\nDmUpHTUHpb1LafngxlHXSMhQkzYvgK3ze5r3Gx9iWcVquu9SXLUwpZXCHeqhYnAb\nasrwE7A22QKBgG8kZteyhnI0dwJ53MAdAXOIRT/HoKary74jNc7RB2Wg5tXA4uZ4\ngxewgRvxdhDC2mDhLa6IWbmwGYo6zh2Af7i6VqJP3d8BK+u9B2CZ5xVXipKPYX9j\np+53N0ufDARP3UA98CCZyMfvZsqksPOJc6rcodsEOuGJI4b+FzzNCxBlAoGARrqN\n532AJ2qo30KZY/nGG4nOBVv98zcHy+HC9dLkYoaCzCvbvz1NJPLlcMsoq0Wxk7Vm\nSOjLb38/pRLjaaprHgmK7VJ6vmWpYqb5pPP/S8AsaeKs2wXxvhLIixFDH8xYENlF\nUPaO+XgS2czHupRe2U8AYs8It4nSjfMqunmbNFECgYA5sX7rk5UCvO8u3QLmUaRt\no6H0rx8F4qTl1IyWXqKSBTJpyRT2uiYH6WBI1SLjE9ugzTLMPyWfoiaJLrfpq/SN\n2TdyNpS3UXiqswLX96ygbNFFuhoDi3bPC+lGWCE8hMWTFnICPiOIgXG22jbJxX7U\nrdLQVtQqrySH+qCPAy/KvA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "dialogflow-agent@smart-reminders-ueys.iam.gserviceaccount.com",
+  "client_id": "110104744199776082986",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/dialogflow-agent%40smart-reminders-ueys.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

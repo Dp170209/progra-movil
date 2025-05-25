@@ -18,7 +18,9 @@ dependencies:
   google_mlkit_face_detection: ^0.5.0
   firebase_storage: ^12.4.6
   provider: ^6.1.1
-
+  dialogflow_flutter: ^1.0.0
+  http: ^0.13.6
+  googleapis_auth: ^1.4.1
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +29,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/clave_dialogflow.json
