@@ -12,8 +12,12 @@ class RepositorioHabitos {
         .collection('habitos');
   }
 
-  Future<void> registrarHabito(String recordatorioId) async {
-    final habito = Habito(id: recordatorioId, fechaHora: DateTime.now());
+  Future<void> registrarHabito(String recordatorioId, String titulo) async {
+    final habito = Habito(
+      id: recordatorioId,
+      fechaHora: DateTime.now(),
+      titulo: titulo,
+    );
     await _colHabitos.doc(recordatorioId).set(habito.toMap());
   }
 
@@ -39,6 +43,37 @@ class RepositorioHabitos {
   Future<int?> mejorHora() async {
     final mapa = await conteoPorHora();
     if (mapa.isEmpty) return null;
+    return mapa.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
+  Future<Map<String, int>> conteoPorTitulo() async {
+    final habitos = await obtenerHabitos();
+    final mapa = <String, int>{};
+    for (var h in habitos) {
+      final titulo = h.titulo.trim();
+      if (titulo.isEmpty) continue;
+      mapa[titulo] = (mapa[titulo] ?? 0) + 1;
+    }
+    return mapa;
+  }
+
+  Future<String?> habitoMasFrecuente() async {
+    final conteo = await conteoPorTitulo();
+    if (conteo.isEmpty) return null;
+    return conteo.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
+  Future<String?> tituloMasRepetido() async {
+    final habitos = await obtenerHabitos();
+    if (habitos.isEmpty) return null;
+
+    final mapa = <String, int>{};
+    for (var h in habitos) {
+      final t = h.titulo.trim();
+      if (t.isEmpty) continue;
+      mapa[t] = (mapa[t] ?? 0) + 1;
+    }
+
     return mapa.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
   }
 }

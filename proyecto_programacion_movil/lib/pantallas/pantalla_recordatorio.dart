@@ -68,6 +68,7 @@ class PantallaRecordatorios extends StatelessWidget {
                                 if (!esCompletado) {
                                   await RepositorioHabitos().registrarHabito(
                                     r.id,
+                                    r.titulo,
                                   );
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

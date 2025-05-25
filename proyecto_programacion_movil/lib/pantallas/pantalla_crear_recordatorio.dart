@@ -1,8 +1,8 @@
-// lib/pantallas/pantalla_crear_recordatorio.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../gestores/gestor_recordatorios.dart';
 import '../modelos/recordatorio.dart';
+import '../repositorios/repositorio_habito.dart';
 
 class PantallaCrearRecordatorio extends StatefulWidget {
   final int? sugerenciaHora;
@@ -17,12 +17,12 @@ class PantallaCrearRecordatorio extends StatefulWidget {
 class _PantallaCrearRecordatorioState extends State<PantallaCrearRecordatorio> {
   final _tituloCtrl = TextEditingController();
   late DateTime _fechaSeleccionada;
+  bool _cargandoSugerencia = true;
 
   @override
   void initState() {
     super.initState();
     final ahora = DateTime.now();
-    // Si viene sugerencia, preselecciona hoy a esa hora; si no, ahora
     _fechaSeleccionada =
         widget.sugerenciaHora != null
             ? DateTime(
@@ -32,6 +32,23 @@ class _PantallaCrearRecordatorioState extends State<PantallaCrearRecordatorio> {
               widget.sugerenciaHora!,
             )
             : ahora;
+
+    _cargarTituloSugerido();
+  }
+
+  Future<void> _cargarTituloSugerido() async {
+    final repo = RepositorioHabitos();
+    final sugerido = await repo.tituloMasRepetido();
+
+    if (sugerido != null && _tituloCtrl.text.trim().isEmpty) {
+      setState(() {
+        _tituloCtrl.text = sugerido;
+      });
+    }
+
+    setState(() {
+      _cargandoSugerencia = false;
+    });
   }
 
   Future<void> _pickDateTime() async {
@@ -99,7 +116,13 @@ class _PantallaCrearRecordatorioState extends State<PantallaCrearRecordatorio> {
               ),
             ),
             const Spacer(),
-            ElevatedButton(onPressed: _guardar, child: const Text('Guardar')),
+            ElevatedButton(
+              onPressed: _guardar,
+              child:
+                  _cargandoSugerencia
+                      ? const CircularProgressIndicator()
+                      : const Text('Guardar'),
+            ),
           ],
         ),
       ),
