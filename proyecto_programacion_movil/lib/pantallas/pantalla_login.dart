@@ -1,6 +1,11 @@
 // lib/pantallas/pantalla_login.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import '../servicios/servicios.dart';
 
 class PantallaLogin extends StatefulWidget {
   const PantallaLogin({super.key});
@@ -10,17 +15,37 @@ class PantallaLogin extends StatefulWidget {
 }
 
 class _PantallaLoginState extends State<PantallaLogin> {
-  final _correoCtrl   = TextEditingController();
-  final _passCtrl     = TextEditingController();
-  bool _cargando      = false;
-  String _error       = '';
+  final _correoCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  bool _cargando = false;
+  String _error = '';
+  bool _tieneRostro = false;
 
-  Future<void> _login() async {
+  @override
+  void initState() {
+    super.initState();
+    _verificarRostroRegistrado();
+  }
+
+  Future<void> _verificarRostroRegistrado() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(user.uid)
+              .get();
+      setState(() {
+        _tieneRostro = doc.data()?['fotoPerfil'] != null;
+      });
+    }
+  }
+
+  Future<void> _loginEmail() async {
     setState(() {
       _cargando = true;
-      _error    = '';
+      _error = '';
     });
-
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _correoCtrl.text.trim(),
@@ -32,6 +57,38 @@ class _PantallaLoginState extends State<PantallaLogin> {
       setState(() => _error = e.message ?? 'Error desconocido');
     } catch (e) {
       setState(() => _error = 'Error: $e');
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  Future<void> _loginFacial() async {
+    setState(() {
+      _cargando = true;
+      _error = '';
+    });
+    try {
+      final XFile? foto = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+      );
+      if (foto == null) {
+        setState(() {
+          _error = 'Operación cancelada';
+          _cargando = false;
+        });
+        return;
+      }
+      final File file = File(foto.path);
+      final bool match = await ServicioFacial.instancia.verificarRostro(file);
+      if (match) {
+        // Obtener usuario actual y navegar
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        setState(() => _error = 'Rostro no reconocido');
+      }
+    } catch (e) {
+      setState(() => _error = 'Error facial: $e');
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
@@ -49,7 +106,9 @@ class _PantallaLoginState extends State<PantallaLogin> {
             TextField(
               controller: _correoCtrl,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Correo electrónico'),
+              decoration: const InputDecoration(
+                labelText: 'Correo electrónico',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -64,9 +123,17 @@ class _PantallaLoginState extends State<PantallaLogin> {
             _cargando
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
-                    onPressed: _login,
-                    child: const Text('Iniciar sesión'),
-                  ),
+                  onPressed: _loginEmail,
+                  child: const Text('Iniciar sesión'),
+                ),
+            if (_tieneRostro) ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _loginFacial,
+                icon: const Icon(Icons.face),
+                label: const Text('Iniciar con rostro'),
+              ),
+            ],
             const SizedBox(height: 12),
             TextButton(
               onPressed: () {
