@@ -9,6 +9,7 @@ import 'pantallas/pantalla_registro.dart';
 import 'pantallas/pantalla_registro_facial.dart';
 import 'pantallas/pantalla_inicio.dart';
 import 'pantallas/pantalla_sugerencias.dart';
+import 'pantallas/pantalla_resumen.dart';
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
@@ -40,6 +41,7 @@ class MainApp extends StatelessWidget {
         '/home': (_) => const PantallaInicio(),
         '/recordatorios': (_) => const PantallaRecordatorios(),
         '/sugerencias': (_) => const PantallaSugerencias(),
+        '/resumen': (_) => const PantallaResumen(),     // ← aquí
       },
     );
   }
