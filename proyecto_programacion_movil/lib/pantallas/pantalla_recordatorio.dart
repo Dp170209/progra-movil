@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../gestores/gestor_recordatorios.dart';
 import '../modelos/recordatorio.dart';
-import '../servicios/servicio_dialogflow.dart'; // <-- el nuevo archivo que usa HTTP
-
+import '../servicios/servicio_dialogflow.dart';
+import '../repositorios/repositorio_habito.dart';
 
 class PantallaRecordatorios extends StatelessWidget {
   const PantallaRecordatorios({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
     return ChangeNotifierProvider(
-      create: (_) => GestorRecordatorios(uid),
+      create: (_) => GestorRecordatorios(),
       builder: (context, _) {
         return Scaffold(
           appBar: AppBar(title: const Text('Mis Recordatorios')),
@@ -28,7 +25,9 @@ class PantallaRecordatorios extends StatelessWidget {
                   }
                   final lista = snapshot.data ?? [];
                   if (lista.isEmpty) {
-                    return const Center(child: Text('No tienes recordatorios aún.'));
+                    return const Center(
+                      child: Text('No tienes recordatorios aún.'),
+                    );
                   }
                   return ListView.builder(
                     itemCount: lista.length,
@@ -40,9 +39,35 @@ class PantallaRecordatorios extends StatelessWidget {
                           '${r.fechaHora.toLocal()}'.split('.')[0] +
                               ' — ${calcularTiempoRestante(r.fechaHora)}',
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _confirmarBorrado(context, gestor, r),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Botón “Hecho”
+                            IconButton(
+                              icon: const Icon(
+                                Icons.check_circle,
+                                color: Colors.green,
+                              ),
+                              tooltip: 'Marcar como hecho',
+                              onPressed: () async {
+                                await RepositorioHabitos().registrarHabito(
+                                  r.id,
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('✅ Hábito registrado'),
+                                  ),
+                                );
+                              },
+                            ),
+                            // Botón “Borrar”
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Eliminar',
+                              onPressed:
+                                  () => _confirmarBorrado(context, gestor, r),
+                            ),
+                          ],
                         ),
                         onTap: () => _editarDialog(context, gestor, r),
                       );
@@ -64,7 +89,10 @@ class PantallaRecordatorios extends StatelessWidget {
               FloatingActionButton(
                 child: const Icon(Icons.add),
                 onPressed: () {
-                  final gestor = Provider.of<GestorRecordatorios>(context, listen: false);
+                  final gestor = Provider.of<GestorRecordatorios>(
+                    context,
+                    listen: false,
+                  );
                   _crearDialog(context, gestor);
                 },
               ),
@@ -96,245 +124,268 @@ class PantallaRecordatorios extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Nuevo Recordatorio'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: tituloCtrl,
-              decoration: const InputDecoration(labelText: 'Título'),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () async {
-                final ahora = DateTime.now();
-                final fecha = await showDatePicker(
-                  context: context,
-                  initialDate: ahora,
-                  firstDate: ahora,
-                  lastDate: DateTime(2100),
-                );
-                if (fecha != null) {
-                  final hora = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
-                  );
-                  if (hora != null) {
-                    seleccionada = DateTime(
-                      fecha.year,
-                      fecha.month,
-                      fecha.day,
-                      hora.hour,
-                      hora.minute,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Nuevo Recordatorio'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: tituloCtrl,
+                  decoration: const InputDecoration(labelText: 'Título'),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    final ahora = DateTime.now();
+                    final fecha = await showDatePicker(
+                      context: context,
+                      initialDate: ahora,
+                      firstDate: ahora,
+                      lastDate: DateTime(2100),
                     );
-                  }
-                }
-              },
-              child: const Text('Seleccionar fecha y hora'),
+                    if (fecha != null) {
+                      final hora = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (hora != null) {
+                        seleccionada = DateTime(
+                          fecha.year,
+                          fecha.month,
+                          fecha.day,
+                          hora.hour,
+                          hora.minute,
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Seleccionar fecha y hora'),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              final titulo = tituloCtrl.text.trim();
-              if (titulo.isEmpty || seleccionada == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('⚠️ Título y fecha son obligatorios')),
-                );
-                return;
-              }
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final titulo = tituloCtrl.text.trim();
+                  if (titulo.isEmpty || seleccionada == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('⚠️ Título y fecha son obligatorios'),
+                      ),
+                    );
+                    return;
+                  }
 
-              final nuevo = Recordatorio(
-                id: '',
-                titulo: titulo,
-                fechaHora: seleccionada!,
-                uid: FirebaseAuth.instance.currentUser!.uid,
-              );
-              gestor.agregar(nuevo);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('✅ Recordatorio creado')),
-              );
-            },
-            child: const Text('Guardar'),
+                  final nuevo = Recordatorio(
+                    id: '',
+                    titulo: titulo,
+                    fechaHora: seleccionada!,
+                  );
+                  gestor.agregar(nuevo);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('✅ Recordatorio creado')),
+                  );
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
- void _crearPorTexto(BuildContext context) {
-  final ctrl = TextEditingController();
+  void _crearPorTexto(BuildContext context) {
+    final ctrl = TextEditingController();
 
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Crear recordatorio por texto'),
-      content: TextField(
-        controller: ctrl,
-        decoration: const InputDecoration(
-          labelText: 'Ej: Llamar al doctor mañana a las 5 PM',
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        TextButton(
-          onPressed: () async {
-            final texto = ctrl.text.trim();
-            if (texto.isEmpty) return;
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Crear recordatorio por texto'),
+            content: TextField(
+              controller: ctrl,
+              decoration: const InputDecoration(
+                labelText: 'Ej: Llamar al doctor mañana a las 5 PM',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final texto = ctrl.text.trim();
+                  if (texto.isEmpty) return;
 
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('⏳ Procesando con Dialogflow...')),
-            );
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('⏳ Procesando con Dialogflow...'),
+                    ),
+                  );
 
-            final json = await ServicioDialogflow.instance.procesarFrase(texto);
-            if (json == null || !json.containsKey('titulo') || !json.containsKey('fecha')) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('❌ No se entendió el mensaje')),
-              );
-              return;
-            }
+                  final json = await ServicioDialogflow.instance.procesarFrase(
+                    texto,
+                  );
+                  if (json == null ||
+                      !json.containsKey('titulo') ||
+                      !json.containsKey('fecha')) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('❌ No se entendió el mensaje'),
+                      ),
+                    );
+                    return;
+                  }
 
-            try {
-              final fechaRaw = json['fecha']?[0];
-final titulo = json['titulo']?[0];
+                  try {
+                    final fechaRaw = json['fecha']?[0];
+                    final titulo = json['titulo']?[0];
 
-if (fechaRaw == null || titulo == null) throw Exception();
+                    if (fechaRaw == null || titulo == null) throw Exception();
 
-final fecha = DateTime.parse(fechaRaw);
-final nuevo = Recordatorio(
-  id: '',
-  titulo: titulo,
-  fechaHora: fecha,
-  uid: FirebaseAuth.instance.currentUser!.uid,
-);
+                    final fecha = DateTime.parse(fechaRaw);
+                    final nuevo = Recordatorio(
+                      id: '',
+                      titulo: titulo,
+                      fechaHora: fecha,
+                    );
 
+                    final gestor = Provider.of<GestorRecordatorios>(
+                      context,
+                      listen: false,
+                    );
+                    gestor.agregar(nuevo);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('✅ Recordatorio creado')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('❌ Fecha no válida')),
+                    );
+                  }
+                },
+                child: const Text('Crear'),
+              ),
+            ],
+          ),
+    );
+  }
 
-              final gestor = Provider.of<GestorRecordatorios>(context, listen: false);
-              gestor.agregar(nuevo);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('✅ Recordatorio creado')),
-              );
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('❌ Fecha no válida')),
-              );
-            }
-          },
-          child: const Text('Crear'),
-        ),
-      ],
-    ),
-  );
-}
-
-
-  void _editarDialog(BuildContext context, GestorRecordatorios gestor, Recordatorio r) {
+  void _editarDialog(
+    BuildContext context,
+    GestorRecordatorios gestor,
+    Recordatorio r,
+  ) {
     final tituloCtrl = TextEditingController(text: r.titulo);
     DateTime seleccionada = r.fechaHora;
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Editar Recordatorio'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: tituloCtrl,
-              decoration: const InputDecoration(labelText: 'Título'),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () async {
-                final nuevaFecha = await showDatePicker(
-                  context: context,
-                  initialDate: seleccionada,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime(2100),
-                );
-                if (nuevaFecha != null) {
-                  final hora = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.fromDateTime(seleccionada),
-                  );
-                  if (hora != null) {
-                    seleccionada = DateTime(
-                      nuevaFecha.year,
-                      nuevaFecha.month,
-                      nuevaFecha.day,
-                      hora.hour,
-                      hora.minute,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Editar Recordatorio'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: tituloCtrl,
+                  decoration: const InputDecoration(labelText: 'Título'),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    final nuevaFecha = await showDatePicker(
+                      context: context,
+                      initialDate: seleccionada,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2100),
                     );
-                  }
-                }
-              },
-              child: const Text('Editar fecha y hora'),
+                    if (nuevaFecha != null) {
+                      final hora = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(seleccionada),
+                      );
+                      if (hora != null) {
+                        seleccionada = DateTime(
+                          nuevaFecha.year,
+                          nuevaFecha.month,
+                          nuevaFecha.day,
+                          hora.hour,
+                          hora.minute,
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Editar fecha y hora'),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              final titulo = tituloCtrl.text.trim();
-              if (titulo.isEmpty) return;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final titulo = tituloCtrl.text.trim();
+                  if (titulo.isEmpty) return;
 
-              final actualizado = Recordatorio(
-                id: r.id,
-                titulo: titulo,
-                fechaHora: seleccionada,
-                uid: r.uid,
-              );
-              gestor.editar(actualizado);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('✅ Recordatorio actualizado')),
-              );
-            },
-            child: const Text('Actualizar'),
+                  final actualizado = Recordatorio(
+                    id: r.id,
+                    titulo: titulo,
+                    fechaHora: seleccionada,
+                  );
+                  gestor.editar(actualizado);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('✅ Recordatorio actualizado')),
+                  );
+                },
+                child: const Text('Actualizar'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
-  void _confirmarBorrado(BuildContext context, GestorRecordatorios gestor, Recordatorio r) {
+  void _confirmarBorrado(
+    BuildContext context,
+    GestorRecordatorios gestor,
+    Recordatorio r,
+  ) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('¿Eliminar recordatorio?'),
-        content: Text('Se eliminará "${r.titulo}". ¿Deseas continuar?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('¿Eliminar recordatorio?'),
+            content: Text('Se eliminará "${r.titulo}". ¿Deseas continuar?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () {
+                  gestor.eliminar(r.id);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('🗑 Recordatorio eliminado')),
+                  );
+                },
+                child: const Text(
+                  'Eliminar',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              gestor.eliminar(r.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('🗑 Recordatorio eliminado')),
-              );
-            },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -8,6 +8,7 @@ import 'pantallas/pantalla_login.dart';
 import 'pantallas/pantalla_registro.dart';
 import 'pantallas/pantalla_registro_facial.dart';
 import 'pantallas/pantalla_inicio.dart';
+import 'pantallas/pantalla_sugerencias.dart';
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
@@ -32,12 +33,13 @@ class MainApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/':               (_) => const _AuthWrapper(),
-        '/login':          (_) => const PantallaLogin(),
-        '/registro':       (_) => const PantallaRegistro(),
-        '/registro-facial':(_) => const PantallaRegistroFacial(),
-        '/home':           (_) => const PantallaInicio(),
-        '/recordatorios':  (_) => const PantallaRecordatorios(),
+        '/': (_) => const _AuthWrapper(),
+        '/login': (_) => const PantallaLogin(),
+        '/registro': (_) => const PantallaRegistro(),
+        '/registro-facial': (_) => const PantallaRegistroFacial(),
+        '/home': (_) => const PantallaInicio(),
+        '/recordatorios': (_) => const PantallaRecordatorios(),
+        '/sugerencias': (_) => const PantallaSugerencias(),
       },
     );
   }

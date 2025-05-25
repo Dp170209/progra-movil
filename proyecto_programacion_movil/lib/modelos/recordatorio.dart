@@ -1,37 +1,27 @@
+// lib/modelos/recordatorio.dart
 class Recordatorio {
   final String id;
   final String titulo;
   final DateTime fechaHora;
-  final String uid;
 
   Recordatorio({
     required this.id,
     required this.titulo,
     required this.fechaHora,
-    required this.uid,
   });
 
-Map<String, dynamic> toJson() => {
-  'titulo': titulo,
-  'fechaHora': fechaHora.toIso8601String(),
-  'uid': uid,
-};
+  Map<String, dynamic> toJson() => {
+    'titulo': titulo,
+    'fechaHora': fechaHora.toIso8601String(),
+    // ya no necesitas 'uid'
+  };
 
-
-
-factory Recordatorio.fromJson(String id, Map<String, dynamic> json) {
-  try {
-    final fechaRaw = json['fechaHora'];
-
+  factory Recordatorio.fromJson(String id, Map<String, dynamic> json) {
+    final fechaRaw = json['fechaHora'] as String;
     return Recordatorio(
       id: id,
       titulo: json['titulo'] ?? '',
-      fechaHora: DateTime.parse(fechaRaw), // Esto puede fallar si está mal formateado
-      uid: json['uid'] ?? '',
+      fechaHora: DateTime.parse(fechaRaw),
     );
-  } catch (e) {
-    rethrow;
   }
-}
-
 }
