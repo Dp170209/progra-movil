@@ -14,7 +14,11 @@ class RepositorioHabitos {
 
   Future<void> registrarHabito(String recordatorioId) async {
     final habito = Habito(id: recordatorioId, fechaHora: DateTime.now());
-    await _colHabitos.add(habito.toMap());
+    await _colHabitos.doc(recordatorioId).set(habito.toMap());
+  }
+
+  Future<void> eliminarHabito(String recordatorioId) async {
+    await _colHabitos.doc(recordatorioId).delete();
   }
 
   Future<List<Habito>> obtenerHabitos() async {

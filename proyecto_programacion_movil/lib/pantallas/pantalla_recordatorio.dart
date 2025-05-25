@@ -64,10 +64,8 @@ class PantallaRecordatorios extends StatelessWidget {
                                       ? 'Marcar como pendiente'
                                       : 'Marcar como completado',
                               onPressed: () async {
-                                // Alterna el estado en Firestore
                                 await gestor.alternarEstado(r);
                                 if (!esCompletado) {
-                                  // Si acabamos de marcar completado, registramos el hábito
                                   await RepositorioHabitos().registrarHabito(
                                     r.id,
                                   );
@@ -77,11 +75,13 @@ class PantallaRecordatorios extends StatelessWidget {
                                     ),
                                   );
                                 } else {
-                                  // Si revertimos a pendiente
+                                  await RepositorioHabitos().eliminarHabito(
+                                    r.id,
+                                  );
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                        '🔄 Marcado como pendiente',
+                                        '🔄 Marcado como pendiente y hábito eliminado',
                                       ),
                                     ),
                                   );
