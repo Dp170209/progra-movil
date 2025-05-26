@@ -22,7 +22,10 @@ dependencies:
   http: ^0.13.6
   googleapis_auth: ^1.4.1
   fl_chart: ^1.0.0
-  flutter_tts: ^3.5.2
+  camera: ^0.10.0+1
+  path_provider: ^2.0.11
+  speech_to_text: ^6.3.0
+  flutter_tts: ^3.6.3
   lottie: ^2.2.0
 
 dev_dependencies:
@@ -35,4 +38,3 @@ flutter:
 
   assets:
     - assets/clave_dialogflow.json
-    - assets/confetti.json
