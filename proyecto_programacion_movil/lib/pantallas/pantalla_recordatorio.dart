@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:proyecto_programacion_movil/repositorios/repositorio_habito.dart';
+import 'package:proyecto_programacion_movil/servicios/servicio_voz.dart';
 import '../gestores/gestor_recordatorios.dart';
 import '../modelos/recordatorio.dart';
 import '../servicios/servicio_openai.dart';
@@ -113,6 +114,62 @@ class PantallaRecordatorios extends StatelessWidget {
                 icon: const Icon(Icons.auto_mode),
                 label: const Text('Texto Inteligente'),
                 onPressed: () => _crearPorTexto(context),
+              ),
+              const SizedBox(height: 10),
+              FloatingActionButton.extended(
+                heroTag: 'fab_voz',
+                icon: const Icon(Icons.mic),
+                label: const Text('Voz Inteligente'),
+                onPressed: () async {
+                  // Invocar servicio de voz
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('🎙️ Escuchando...')),
+                  );
+                  final comando = await ServicioVoz.instance.escucharComando();
+                  if (comando == null || comando.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('❌ No te escuché bien')),
+                    );
+                    return;
+                  }
+                  // Procesar con OpenAI
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('⏳ Procesando con OpenAI...')),
+                  );
+                  final json = await ServicioOpenAI.instance.procesarFrase(
+                    comando,
+                  );
+                  if (json == null ||
+                      !json.containsKey('titulo') ||
+                      !json.containsKey('fecha')) {
+                    await ServicioVoz.instance.hablar('No entendí tu mensaje');
+                    return;
+                  }
+                  try {
+                    final fechaUtc = DateTime.parse(json['fecha']);
+                    final fecha = fechaUtc.toLocal();
+                    final titulo = json['titulo'] as String;
+                    final nuevo = Recordatorio(
+                      id: '',
+                      titulo: titulo,
+                      fechaHora: fecha,
+                    );
+                    Provider.of<GestorRecordatorios>(
+                      context,
+                      listen: false,
+                    ).agregar(nuevo);
+                    final respuesta =
+                        'Recordatorio "$titulo" para ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')} creado';
+                    await ServicioVoz.instance.hablar(respuesta);
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('✅ $respuesta')));
+                  } catch (e) {
+                    await ServicioVoz.instance.hablar(
+                      'La fecha no parece válida',
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 10),
               FloatingActionButton(
