@@ -15,7 +15,8 @@ dependencies:
   firebase_auth: ^5.5.4
   cloud_firestore: ^5.6.8
   image_picker: ^0.8.7+4
-  google_mlkit_face_detection: ^0.5.0
+  # Actualizamos a la última versión de Face Detection
+  google_mlkit_face_detection: ^0.13.1    # :contentReference[oaicite:0]{index=0}
   firebase_storage: ^12.4.6
   provider: ^6.1.1
   dialogflow_flutter: ^1.0.0
@@ -28,6 +29,10 @@ dependencies:
   flutter_tts: ^3.6.3
   lottie: ^2.2.0
 
+dependency_overrides:
+  # Esta versión incluye el namespace en build.gradle
+  google_mlkit_commons: ^0.11.0          # :contentReference[oaicite:1]{index=1}
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -38,3 +43,4 @@ flutter:
 
   assets:
     - assets/clave_dialogflow.json
+    - assets/confetti.json   # Asegúrate de tener este JSON en tu carpeta assets

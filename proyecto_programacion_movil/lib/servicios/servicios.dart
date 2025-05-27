@@ -1,17 +1,16 @@
-// lib/servicios.dart
+// lib/servicios/servicios.dart
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
+/// Servicio para detección de rostros y carga de imágenes en Firebase Storage.
 class ServicioFacial {
   ServicioFacial._();
   static final ServicioFacial instancia = ServicioFacial._();
 
-  // Detector de rostros MLKit
-  final _detector = FaceDetector(
+  final FaceDetector _detector = FaceDetector(
     options: FaceDetectorOptions(
       enableClassification: false,
       enableLandmarks: true,
@@ -19,82 +18,93 @@ class ServicioFacial {
     ),
   );
 
-  /// Captura y sube la imagen al storage si detecta al menos un rostro.
+  /// Detecta al menos un rostro en la imagen y la sube.
+  /// Retorna la URL de descarga o null si no detecta rostro o falla.
   Future<String?> capturarYSubir(File imagen) async {
     try {
-      final rostros = await _detector.processImage(InputImage.fromFile(imagen));
+      // Detección de rostros en imagen estática
+      final input = InputImage.fromFilePath(imagen.path);
+      final rostros = await _detector.processImage(input);
       if (rostros.isEmpty) return null;
 
-      final uid = FirebaseAuth.instance.currentUser!.uid;
-      final referencia = FirebaseStorage.instance
-          .ref('perfiles_faciales')
-          .child('$uid.jpg');
+      // Identificador de usuario
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return null;
 
-      // Subir archivo
-      await referencia.putFile(imagen);
+      // Referencia al archivo en Storage
+      final storageRef = FirebaseStorage.instance
+          .ref('perfiles_faciales/$uid.jpg');
 
-      // Obtener URL de descarga
-      final url = await referencia.getDownloadURL();
-      return url;
+      // Subida de la imagen
+      final uploadTask = storageRef.putFile(imagen);
+      final snapshot = await uploadTask;
+
+      if (snapshot.state == TaskState.success) {
+        // Obtener la URL desde el snapshot.ref
+        final downloadUrl = await snapshot.ref.getDownloadURL();
+        return downloadUrl;
+      } else {
+        print('⚠️ Upload failed, state: ${snapshot.state}');
+        return null;
+      }
     } on FirebaseException catch (e) {
-      // Manejo de errores de Storage
-      print('Error Storage (capturarYSubir): ${e.code} - ${e.message}');
+      // Manejo de errores de Firebase Storage
+      print('🛑 FirebaseException: ${e.code} - ${e.message}');
       return null;
     } catch (e) {
-      print('Error inesperado (capturarYSubir): $e');
+      // Otros errores
+      print('❌ Unexpected error: $e');
       return null;
     }
   }
 
   /// Verifica que el nuevo rostro coincida con el registrado.
   Future<bool> verificarRostro(File nuevaImagen) async {
-    // ... mismo código de antes ...
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(user.uid)
-            .get();
-    final url = doc.data()?['fotoPerfil'] as String?;
-    if (url == null) return false;
-
-    Uint8List? bytes;
     try {
-      final ref = FirebaseStorage.instance.refFromURL(url);
-      bytes = await ref.getData();
-    } on FirebaseException catch (e) {
-      if (e.code == 'object-not-found') {
-        return false;
-      }
-      rethrow;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+
+      // Obtener URL de la imagen de referencia
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user.uid)
+          .get();
+      final refUrl = doc.data()?['fotoPerfil'] as String?;
+      if (refUrl == null) return false;
+
+      // Descargar bytes de la imagen de referencia
+      final ref = FirebaseStorage.instance.refFromURL(refUrl);
+      final bytes = await ref.getData();
+      if (bytes == null) return false;
+
+      // Guardar imagen de referencia temporal
+      final tempFile = File('${Directory.systemTemp.path}/${user.uid}_ref.jpg');
+      await tempFile.writeAsBytes(bytes);
+
+      // Procesar ambas imágenes
+      final rostrosRef = await _detector.processImage(
+        InputImage.fromFilePath(tempFile.path),
+      );
+      final rostrosNew = await _detector.processImage(
+        InputImage.fromFilePath(nuevaImagen.path),
+      );
+      if (rostrosRef.isEmpty || rostrosNew.isEmpty) return false;
+
+      // Comparar ángulos y tamaños
+      final f1 = rostrosRef.first;
+      final f2 = rostrosNew.first;
+      final y1 = f1.headEulerAngleY ?? 0.0;
+      final y2 = f2.headEulerAngleY ?? 0.0;
+      final ratioW = (f1.boundingBox.width / f2.boundingBox.width).abs();
+      final ratioH = (f1.boundingBox.height / f2.boundingBox.height).abs();
+      final angleDiff = (y1 - y2).abs();
+
+      const maxRatio = 1.2;
+      const maxAngle = 15.0;
+      return (ratioW < maxRatio && ratioH < maxRatio && angleDiff < maxAngle);
+    } catch (e) {
+      print('❌ Error en verificarRostro: $e');
+      return false;
     }
-    if (bytes == null) return false;
-
-    final tempDir = Directory.systemTemp;
-    final refFile = File('${tempDir.path}/${user.uid}_ref.jpg');
-    await refFile.writeAsBytes(bytes);
-
-    final rostrosRef = await _detector.processImage(
-      InputImage.fromFile(refFile),
-    );
-    final rostrosNew = await _detector.processImage(
-      InputImage.fromFile(nuevaImagen),
-    );
-    if (rostrosRef.isEmpty || rostrosNew.isEmpty) return false;
-
-    final f1 = rostrosRef.first;
-    final f2 = rostrosNew.first;
-    final double y1 = f1.headEulerAngleY ?? 0.0;
-    final double y2 = f2.headEulerAngleY ?? 0.0;
-    final ratioW = (f1.boundingBox.width / f2.boundingBox.width).abs();
-    final ratioH = (f1.boundingBox.height / f2.boundingBox.height).abs();
-    final angleDiff = (y1 - y2).abs();
-
-    if (ratioW < 1.2 && ratioH < 1.2 && angleDiff < 15) {
-      return true;
-    }
-    return false;
   }
 }
