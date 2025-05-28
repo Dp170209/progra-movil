@@ -32,8 +32,9 @@ class ServicioFacial {
       if (uid == null) return null;
 
       // Referencia al archivo en Storage
-      final storageRef = FirebaseStorage.instance
-          .ref('perfiles_faciales/$uid.jpg');
+      final storageRef = FirebaseStorage.instance.ref(
+        'perfiles_faciales/$uid.jpg',
+      );
 
       // Subida de la imagen
       final uploadTask = storageRef.putFile(imagen);
@@ -65,10 +66,11 @@ class ServicioFacial {
       if (user == null) return false;
 
       // Obtener URL de la imagen de referencia
-      final doc = await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(user.uid)
-          .get();
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(user.uid)
+              .get();
       final refUrl = doc.data()?['fotoPerfil'] as String?;
       if (refUrl == null) return false;
 
@@ -90,6 +92,13 @@ class ServicioFacial {
       );
       if (rostrosRef.isEmpty || rostrosNew.isEmpty) return false;
 
+      if (rostrosRef.isEmpty) {
+        print('❌ No se detectó rostro en la imagen de referencia');
+      }
+      if (rostrosNew.isEmpty) {
+        print('❌ No se detectó rostro en la nueva imagen');
+      }
+
       // Comparar ángulos y tamaños
       final f1 = rostrosRef.first;
       final f2 = rostrosNew.first;
@@ -99,8 +108,14 @@ class ServicioFacial {
       final ratioH = (f1.boundingBox.height / f2.boundingBox.height).abs();
       final angleDiff = (y1 - y2).abs();
 
-      const maxRatio = 1.2;
-      const maxAngle = 15.0;
+      print('🧠 Ángulo Y referencia: ${f1.headEulerAngleY}');
+      print('🧠 Ángulo Y nueva: ${f2.headEulerAngleY}');
+      print('📏 Ratio ancho: $ratioW');
+      print('📏 Ratio alto: $ratioH');
+      print('↩️ Diferencia de ángulo: $angleDiff');
+
+      const maxRatio = 1.6;
+      const maxAngle = 25.0;
       return (ratioW < maxRatio && ratioH < maxRatio && angleDiff < maxAngle);
     } catch (e) {
       print('❌ Error en verificarRostro: $e');

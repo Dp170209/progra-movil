@@ -46,10 +46,8 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
   Route _fadeRoute(Widget page) {
     return PageRouteBuilder(
       transitionDuration: const Duration(milliseconds: 500),
-      pageBuilder: (_, animation, __) => FadeTransition(
-        opacity: animation,
-        child: page,
-      ),
+      pageBuilder:
+          (_, animation, __) => FadeTransition(opacity: animation, child: page),
     );
   }
 
@@ -68,17 +66,18 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
       final url = await ServicioFacial.instancia.capturarYSubir(archivo);
       if (url == null) {
         setState(() {
-          _message = 'No se detectó ningún rostro. Intenta de nuevo.';
+          _message =
+              '❌ No se detectó rostro o hubo un error al subir la imagen.\nAsegúrate de que haya buena luz y tu rostro esté centrado.';
         });
       } else {
         final uid = FirebaseAuth.instance.currentUser!.uid;
-        await FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(uid)
-            .set({'fotoPerfil': url}, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
+          'fotoPerfil': url,
+        }, SetOptions(merge: true));
         if (!mounted) return;
-        // Navega con fade a la pantalla de inicio
-        Navigator.of(context).pushReplacement(_fadeRoute(const PantallaInicio()));
+        Navigator.of(
+          context,
+        ).pushReplacement(_fadeRoute(const PantallaInicio()));
       }
     } catch (e) {
       setState(() {
@@ -115,83 +114,93 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
             children: [
               // Vista previa de cámara con overlay guía
               Expanded(
-                child: _controller == null || !_controller!.value.isInitialized
-                    ? const Center(child: CircularProgressIndicator())
-                    : Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          CameraPreview(_controller!),
-                          Center(
-                            child: Container(
-                              width: 250,
-                              height: 250,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white70,
-                                  width: 4,
+                child:
+                    _controller == null || !_controller!.value.isInitialized
+                        ? const Center(child: CircularProgressIndicator())
+                        : Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            CameraPreview(_controller!),
+                            Center(
+                              child: Container(
+                                width: 250,
+                                height: 250,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white70,
+                                    width: 4,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          _message.isEmpty
-                              ? Positioned(
-                                  bottom: MediaQuery.of(context).size.height * 0.4,
+                            _message.isEmpty
+                                ? Positioned(
+                                  bottom:
+                                      MediaQuery.of(context).size.height * 0.4,
                                   left: 0,
                                   right: 0,
                                   child: Text(
                                     'Alinea tu rostro aquí',
                                     textAlign: TextAlign.center,
-                                    style: theme.textTheme.bodyLarge
-                                        ?.copyWith(color: Colors.white70),
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      color: Colors.white70,
+                                    ),
                                   ),
                                 )
-                              : Container(),
-                        ],
-                      ),
+                                : Container(),
+                          ],
+                        ),
               ),
               // Sección de controles
               Container(
                 decoration: BoxDecoration(
                   color: Colors.black54,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Column(
                   children: [
                     if (_message.isNotEmpty)
                       Text(
                         _message,
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: Colors.redAccent),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.redAccent,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
-                      child: _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : ElevatedButton.icon(
-                              onPressed: _tomarSelfie,
-                              icon: const Icon(Icons.camera_alt, size: 24),
-                              label: const Text('Capturar Selfie'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1976D2),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(32)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
+                      child:
+                          _isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : ElevatedButton.icon(
+                                onPressed: _tomarSelfie,
+                                icon: const Icon(Icons.camera_alt, size: 24),
+                                label: const Text('Capturar Selfie'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF1976D2),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(32),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
                               ),
-                            ),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
-                      onPressed: () =>
-                          Navigator.of(context).pushReplacement(_fadeRoute(
-                        const PantallaInicio(),
-                      )),
+                      onPressed:
+                          () => Navigator.of(
+                            context,
+                          ).pushReplacement(_fadeRoute(const PantallaInicio())),
                       child: const Text('Omitir (más tarde)'),
                     ),
                   ],
