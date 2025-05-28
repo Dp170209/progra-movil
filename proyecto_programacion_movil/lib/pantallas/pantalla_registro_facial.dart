@@ -1,5 +1,4 @@
 // lib/pantallas/pantalla_registro_facial.dart
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,7 +6,9 @@ import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../servicios/servicios.dart';
+import 'pantalla_inicio.dart';
 
+/// Pantalla para capturar y registrar la foto de perfil facial.
 class PantallaRegistroFacial extends StatefulWidget {
   const PantallaRegistroFacial({super.key});
 
@@ -38,8 +39,18 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
       enableAudio: false,
     );
     await _controller!.initialize();
-    if (!mounted) return;
-    setState(() {});
+    if (mounted) setState(() {});
+  }
+
+  /// Helper para transición fade
+  Route _fadeRoute(Widget page) {
+    return PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 500),
+      pageBuilder: (_, animation, __) => FadeTransition(
+        opacity: animation,
+        child: page,
+      ),
+    );
   }
 
   Future<void> _tomarSelfie() async {
@@ -53,21 +64,21 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
       final XFile foto = await _controller!.takePicture();
       final File archivo = File(foto.path);
 
-      // ServicioFacial.detecta rostros y sube la imagen
+      // Procesa y sube si hay rostro
       final url = await ServicioFacial.instancia.capturarYSubir(archivo);
       if (url == null) {
         setState(() {
           _message = 'No se detectó ningún rostro. Intenta de nuevo.';
         });
       } else {
-        // Guarda la URL en Firestore
         final uid = FirebaseAuth.instance.currentUser!.uid;
         await FirebaseFirestore.instance
             .collection('usuarios')
             .doc(uid)
             .set({'fotoPerfil': url}, SetOptions(merge: true));
         if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/home');
+        // Navega con fade a la pantalla de inicio
+        Navigator.of(context).pushReplacement(_fadeRoute(const PantallaInicio()));
       }
     } catch (e) {
       setState(() {
@@ -88,51 +99,107 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
 
   @override
   Widget build(BuildContext context) {
-    if (_controller == null || !_controller!.value.isInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
+    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Registro Facial')),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Vista previa de la cámara
-          Expanded(child: CameraPreview(_controller!)),
-
-          // Mensajes de estado
-          if (_message.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                _message,
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1E1E1E), Color(0xFF3D3D3D)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Vista previa de cámara con overlay guía
+              Expanded(
+                child: _controller == null || !_controller!.value.isInitialized
+                    ? const Center(child: CircularProgressIndicator())
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CameraPreview(_controller!),
+                          Center(
+                            child: Container(
+                              width: 250,
+                              height: 250,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white70,
+                                  width: 4,
+                                ),
+                              ),
+                            ),
+                          ),
+                          _message.isEmpty
+                              ? Positioned(
+                                  bottom: MediaQuery.of(context).size.height * 0.4,
+                                  left: 0,
+                                  right: 0,
+                                  child: Text(
+                                    'Alinea tu rostro aquí',
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodyLarge
+                                        ?.copyWith(color: Colors.white70),
+                                  ),
+                                )
+                              : Container(),
+                        ],
+                      ),
               ),
-            ),
-
-          // Botón de captura
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton.icon(
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Capturar Selfie'),
-                    onPressed: _tomarSelfie,
-                  ),
+              // Sección de controles
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  children: [
+                    if (_message.isNotEmpty)
+                      Text(
+                        _message,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.redAccent),
+                        textAlign: TextAlign.center,
+                      ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : ElevatedButton.icon(
+                              onPressed: _tomarSelfie,
+                              icon: const Icon(Icons.camera_alt, size: 24),
+                              label: const Text('Capturar Selfie'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1976D2),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(32)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.of(context).pushReplacement(_fadeRoute(
+                        const PantallaInicio(),
+                      )),
+                      child: const Text('Omitir (más tarde)'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-
-          // Omitir registro
-          TextButton(
-            onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
-            child: const Text('Omitir (más tarde)'),
-          ),
-
-          const SizedBox(height: 16),
-        ],
+        ),
       ),
     );
   }
