@@ -14,7 +14,7 @@ dependencies:
   firebase_core: ^3.13.1
   firebase_auth: ^5.5.4
   cloud_firestore: ^5.6.8
-  image_picker: ^0.8.7+4
+  image_picker: ^1.1.2
   # Actualizamos a la última versión de Face Detection
   google_mlkit_face_detection: ^0.13.1    # :contentReference[oaicite:0]{index=0}
   firebase_storage: ^12.4.6

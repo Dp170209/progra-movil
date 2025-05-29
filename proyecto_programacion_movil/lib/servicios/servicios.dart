@@ -46,6 +46,9 @@ class ServicioFacial {
       if (snapshot.state == TaskState.success) {
         // Obtener la URL desde el snapshot.ref
         final downloadUrl = await snapshot.ref.getDownloadURL();
+        await FirebaseFirestore.instance.collection('usuarios').doc(uid).update(
+          {'fotoPerfil': downloadUrl},
+        );
         return downloadUrl;
       } else {
         print('⚠️ Upload failed, state: ${snapshot.state}');
