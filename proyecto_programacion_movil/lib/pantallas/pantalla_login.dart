@@ -11,10 +11,8 @@ import 'pantalla_registro.dart';
 Route _fadeRoute(Widget page) {
   return PageRouteBuilder(
     transitionDuration: const Duration(milliseconds: 500),
-    pageBuilder: (_, animation, __) => FadeTransition(
-      opacity: animation,
-      child: page,
-    ),
+    pageBuilder:
+        (_, animation, __) => FadeTransition(opacity: animation, child: page),
   );
 }
 
@@ -28,9 +26,14 @@ class PantallaLogin extends StatefulWidget {
 class _PantallaLoginState extends State<PantallaLogin> {
   final _correoCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+
   bool _cargando = false;
   String _error = '';
   bool _tieneRostro = false;
+
+  // Control de intentos faciales
+  int _intentosFacial = 0;
+  static const int _maxIntentosFacial = 3;
 
   @override
   void initState() {
@@ -38,19 +41,32 @@ class _PantallaLoginState extends State<PantallaLogin> {
     _verificarRostroRegistrado();
   }
 
+  @override
+  void dispose() {
+    _correoCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _verificarRostroRegistrado() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(user.uid)
-          .get();
-      setState(() => _tieneRostro = doc.data()?['fotoPerfil'] != null);
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(user.uid)
+              .get();
+      setState(() {
+        _tieneRostro = doc.data()?['fotoPerfil'] != null;
+      });
     }
   }
 
   Future<void> _loginEmail() async {
-    setState(() { _cargando = true; _error = ''; });
+    setState(() {
+      _cargando = true;
+      _error = '';
+    });
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _correoCtrl.text.trim(),
@@ -68,26 +84,78 @@ class _PantallaLoginState extends State<PantallaLogin> {
   }
 
   Future<void> _loginFacial() async {
-    setState(() { _cargando = true; _error = ''; });
+    // Si ya agotó los intentos, mostrar fallback
+    if (_intentosFacial >= _maxIntentosFacial) {
+      _mostrarDialogoFallback();
+      return;
+    }
+
+    setState(() {
+      _cargando = true;
+      _error = '';
+    });
+
     try {
-      final XFile? foto = await ImagePicker().pickImage(source: ImageSource.camera);
+      final XFile? foto = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+      );
       if (foto == null) {
-        setState(() { _error = 'Operación cancelada'; _cargando = false; });
+        setState(() {
+          _error = 'Operación cancelada';
+          _cargando = false;
+        });
         return;
       }
       final File file = File(foto.path);
       final bool match = await ServicioFacial.instancia.verificarRostro(file);
+
       if (match) {
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/home');
       } else {
-        setState(() => _error = 'Rostro no reconocido');
+        _intentosFacial++;
+        if (_intentosFacial < _maxIntentosFacial) {
+          setState(() {
+            _error =
+                'Rostro no reconocido. Intentos restantes: '
+                '${_maxIntentosFacial - _intentosFacial}';
+          });
+        } else {
+          _mostrarDialogoFallback();
+        }
       }
     } catch (e) {
       setState(() => _error = 'Error facial: $e');
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
+  }
+
+  void _mostrarDialogoFallback() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Intentos agotados'),
+            content: const Text(
+              'No se pudo reconocer tu rostro tras varios intentos.\n'
+              'Por favor, inicia sesión con correo y contraseña.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _intentosFacial = 0;
+                    _error = '';
+                  });
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -105,7 +173,9 @@ class _PantallaLoginState extends State<PantallaLogin> {
         child: Center(
           child: Card(
             elevation: 8,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             margin: const EdgeInsets.symmetric(horizontal: 24),
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -120,7 +190,9 @@ class _PantallaLoginState extends State<PantallaLogin> {
                     decoration: InputDecoration(
                       labelText: 'Correo electrónico',
                       prefixIcon: const Icon(Icons.email),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -130,7 +202,9 @@ class _PantallaLoginState extends State<PantallaLogin> {
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
                       prefixIcon: const Icon(Icons.lock),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -139,16 +213,19 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
-                    child: _cargando
-                        ? const Center(child: CircularProgressIndicator())
-                        : ElevatedButton(
-                            onPressed: _loginEmail,
-                            style: ElevatedButton.styleFrom(
-                              shape: const StadiumBorder(),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                    child:
+                        _cargando
+                            ? const Center(child: CircularProgressIndicator())
+                            : ElevatedButton(
+                              onPressed: _loginEmail,
+                              style: ElevatedButton.styleFrom(
+                                shape: const StadiumBorder(),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                              ),
+                              child: const Text('Iniciar sesión'),
                             ),
-                            child: const Text('Iniciar sesión'),
-                          ),
                   ),
                   if (_tieneRostro) ...[
                     const SizedBox(height: 12),
@@ -167,8 +244,10 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   ],
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacement(
-                        _fadeRoute(const PantallaRegistro())),
+                    onPressed:
+                        () => Navigator.of(
+                          context,
+                        ).pushReplacement(_fadeRoute(const PantallaRegistro())),
                     child: const Text('¿No tienes cuenta? Regístrate'),
                   ),
                 ],
