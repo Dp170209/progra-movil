@@ -26,26 +26,14 @@ class PantallaLogin extends StatefulWidget {
 class _PantallaLoginState extends State<PantallaLogin> {
   final _correoCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-
   bool _cargando = false;
   String _error = '';
   bool _tieneRostro = false;
-
-  // Control de intentos faciales
-  int _intentosFacial = 0;
-  static const int _maxIntentosFacial = 3;
 
   @override
   void initState() {
     super.initState();
     _verificarRostroRegistrado();
-  }
-
-  @override
-  void dispose() {
-    _correoCtrl.dispose();
-    _passCtrl.dispose();
-    super.dispose();
   }
 
   Future<void> _verificarRostroRegistrado() async {
@@ -56,9 +44,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
               .collection('usuarios')
               .doc(user.uid)
               .get();
-      setState(() {
-        _tieneRostro = doc.data()?['fotoPerfil'] != null;
-      });
+      setState(() => _tieneRostro = doc.data()?['fotoPerfil'] != null);
     }
   }
 
@@ -84,17 +70,10 @@ class _PantallaLoginState extends State<PantallaLogin> {
   }
 
   Future<void> _loginFacial() async {
-    // Si ya agotó los intentos, mostrar fallback
-    if (_intentosFacial >= _maxIntentosFacial) {
-      _mostrarDialogoFallback();
-      return;
-    }
-
     setState(() {
       _cargando = true;
       _error = '';
     });
-
     try {
       final XFile? foto = await ImagePicker().pickImage(
         source: ImageSource.camera,
@@ -108,54 +87,17 @@ class _PantallaLoginState extends State<PantallaLogin> {
       }
       final File file = File(foto.path);
       final bool match = await ServicioFacial.instancia.verificarRostro(file);
-
       if (match) {
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/home');
       } else {
-        _intentosFacial++;
-        if (_intentosFacial < _maxIntentosFacial) {
-          setState(() {
-            _error =
-                'Rostro no reconocido. Intentos restantes: '
-                '${_maxIntentosFacial - _intentosFacial}';
-          });
-        } else {
-          _mostrarDialogoFallback();
-        }
+        setState(() => _error = 'Rostro no reconocido');
       }
     } catch (e) {
       setState(() => _error = 'Error facial: $e');
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
-  }
-
-  void _mostrarDialogoFallback() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Intentos agotados'),
-            content: const Text(
-              'No se pudo reconocer tu rostro tras varios intentos.\n'
-              'Por favor, inicia sesión con correo y contraseña.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _intentosFacial = 0;
-                    _error = '';
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Entendido'),
-              ),
-            ],
-          ),
-    );
   }
 
   @override
