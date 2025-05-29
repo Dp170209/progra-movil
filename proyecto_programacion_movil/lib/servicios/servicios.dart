@@ -23,8 +23,11 @@ class ServicioFacial {
   Future<String?> capturarYSubir(File imagen) async {
     try {
       // Detección de rostros en imagen estática
+      print('📷 Analizando imagen en: ${imagen.path}');
       final input = InputImage.fromFilePath(imagen.path);
       final rostros = await _detector.processImage(input);
+      print('👤 Rostros detectados: ${rostros.length}');
+
       if (rostros.isEmpty) return null;
 
       // Identificador de usuario
