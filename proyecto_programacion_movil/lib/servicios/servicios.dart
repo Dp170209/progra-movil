@@ -18,8 +18,6 @@ class ServicioFacial {
     ),
   );
 
-  /// Detecta al menos un rostro en la imagen y la sube.
-  /// Retorna la URL de descarga o null si no detecta rostro o falla.
   Future<String?> capturarYSubir(File imagen) async {
     try {
       // Detección de rostros en imagen estática
@@ -28,38 +26,37 @@ class ServicioFacial {
       final rostros = await _detector.processImage(input);
       print('👤 Rostros detectados: ${rostros.length}');
 
-      if (rostros.isEmpty) return null;
-
-      // Identificador de usuario
+      if (rostros.isEmpty) {
+        print('⚠️ No se detectó ningún rostro en la imagen');
+        return null;
+      }
       final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) return null;
-
-      // Referencia al archivo en Storage
+      if (uid == null) {
+        print('⚠️ Usuario no autenticado');
+        return null;
+      }
       final storageRef = FirebaseStorage.instance.ref(
         'perfiles_faciales/$uid.jpg',
       );
-
-      // Subida de la imagen
       final uploadTask = storageRef.putFile(imagen);
       final snapshot = await uploadTask;
 
       if (snapshot.state == TaskState.success) {
-        // Obtener la URL desde el snapshot.ref
         final downloadUrl = await snapshot.ref.getDownloadURL();
         await FirebaseFirestore.instance.collection('usuarios').doc(uid).update(
           {'fotoPerfil': downloadUrl},
         );
+
+        print('✅ Imagen subida y URL guardada en Firestore');
         return downloadUrl;
       } else {
         print('⚠️ Upload failed, state: ${snapshot.state}');
         return null;
       }
     } on FirebaseException catch (e) {
-      // Manejo de errores de Firebase Storage
       print('🛑 FirebaseException: ${e.code} - ${e.message}');
       return null;
     } catch (e) {
-      // Otros errores
       print('❌ Unexpected error: $e');
       return null;
     }
