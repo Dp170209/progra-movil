@@ -28,8 +28,6 @@ dependencies:
   speech_to_text: ^7.0.0
   flutter_tts: ^3.6.3
   lottie: ^2.2.0
-  tflite_flutter: ^0.10.1
-  image: ^4.1.3
 
 dependency_overrides:
   # Esta versión incluye el namespace en build.gradle
@@ -45,5 +43,4 @@ flutter:
 
   assets:
     - assets/clave_dialogflow.json
-    - assets/confetti.json 
-    - assets/models/mobilefacenet.tflite  # Asegúrate de tener este JSON en tu carpeta assets
+    - assets/confetti.json   # Asegúrate de tener este JSON en tu carpeta assets

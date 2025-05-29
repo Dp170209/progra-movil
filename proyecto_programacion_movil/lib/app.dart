@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:proyecto_programacion_movil/gestores/gestor_recordatorios.dart';
 import 'package:proyecto_programacion_movil/pantallas/pantalla_crear_recordatorio.dart';
-import 'package:proyecto_programacion_movil/pantallas/pantalla_login_facial.dart';
 import 'package:proyecto_programacion_movil/pantallas/pantalla_recordatorio.dart';
 
 // Pantallas
@@ -39,7 +38,6 @@ class MainApp extends StatelessWidget {
         routes: {
           '/': (_) => const _AuthWrapper(),
           '/login': (_) => const PantallaLogin(),
-          '/login-facial': (_) => const PantallaLoginFacial(),
           '/registro': (_) => const PantallaRegistro(),
           '/registro-facial': (_) => const PantallaRegistroFacial(),
           '/home': (_) => const PantallaInicio(),
@@ -79,7 +77,7 @@ class _AuthWrapper extends StatelessWidget {
           return const PantallaInicio();
         }
         // Si no, al login:
-        return const PantallaLoginFacial();
+        return const PantallaLogin();
       },
     );
   }
