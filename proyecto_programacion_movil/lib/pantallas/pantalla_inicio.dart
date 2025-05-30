@@ -280,6 +280,8 @@ class _PantallaInicioState extends State<PantallaInicio>
                 _drawerItem(Icons.lightbulb, 'Sugerencias', '/sugerencias'),
                 _drawerItem(Icons.camera_alt, 'Desbloqueo facial',
                     '/desbloqueo'),
+                _drawerItem(Icons.notifications_active, 'Notificaciones', '/notificaciones'),
+
               ]),
             ),
             const Divider(),

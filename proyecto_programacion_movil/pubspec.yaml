@@ -28,6 +28,10 @@ dependencies:
   speech_to_text: ^7.0.0
   flutter_tts: ^3.6.3
   lottie: ^2.2.0
+  flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.2
+  shared_preferences: ^2.2.2
+
 
 dependency_overrides:
   # Esta versión incluye el namespace en build.gradle

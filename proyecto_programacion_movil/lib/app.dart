@@ -15,6 +15,8 @@ import 'pantallas/pantalla_sugerencias.dart';
 import 'pantallas/pantalla_resumen.dart';
 import 'pantallas/pantalla_recordatorio.dart';
 import 'pantallas/pantalla_crear_recordatorio.dart';
+import 'pantallas/pantalla_notificaciones.dart';
+
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
@@ -57,6 +59,8 @@ class MainApp extends StatelessWidget {
           final sugerenciaHora = args?['sugerenciaHora'] as int?;
           return PantallaCrearRecordatorio(sugerenciaHora: sugerenciaHora);
         },
+        '/notificaciones': (_) => const PantallaNotificaciones(),
+
       },
     );
   }
