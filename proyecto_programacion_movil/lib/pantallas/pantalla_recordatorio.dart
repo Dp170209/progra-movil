@@ -6,8 +6,15 @@ import '../gestores/gestor_recordatorios.dart';
 import '../modelos/recordatorio.dart';
 import '../servicios/servicio_openai.dart';
 
-class PantallaRecordatorios extends StatelessWidget {
+class PantallaRecordatorios extends StatefulWidget {
   const PantallaRecordatorios({super.key});
+
+  @override
+  State<PantallaRecordatorios> createState() => _PantallaRecordatoriosState();
+}
+
+class _PantallaRecordatoriosState extends State<PantallaRecordatorios> {
+  String filtroPrioridad = 'todas';
 
   @override
   Widget build(BuildContext context) {
@@ -24,83 +31,142 @@ class PantallaRecordatorios extends StatelessWidget {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
+
                   final lista = snapshot.data ?? [];
                   if (lista.isEmpty) {
                     return const Center(
                       child: Text('No tienes recordatorios aún.'),
                     );
                   }
-                  return ListView.builder(
-                    itemCount: lista.length,
-                    itemBuilder: (context, index) {
-                      final r = lista[index];
-                      final esCompletado = r.estado == 'completado';
-                      return ListTile(
-                        title: Text(
-                          r.titulo,
-                          style: TextStyle(
-                            decoration:
-                                esCompletado
-                                    ? TextDecoration.lineThrough
-                                    : TextDecoration.none,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${r.fechaHora.toLocal()}'.split('.')[0] +
-                              ' — ${calcularTiempoRestante(r.fechaHora)}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                esCompletado
-                                    ? Icons.check_circle_outline
-                                    : Icons.check_circle,
-                                color:
-                                    esCompletado ? Colors.grey : Colors.green,
-                              ),
-                              tooltip:
-                                  esCompletado
-                                      ? 'Marcar como pendiente'
-                                      : 'Marcar como completado',
-                              onPressed: () async {
-                                await gestor.alternarEstado(r);
-                                if (!esCompletado) {
-                                  await RepositorioHabitos().registrarHabito(
-                                    r.id,
-                                    r.titulo,
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('✅ Hábito registrado'),
-                                    ),
-                                  );
-                                } else {
-                                  await RepositorioHabitos().eliminarHabito(
-                                    r.id,
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        '🔄 Marcado como pendiente y hábito eliminado',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
+
+                  final listaFiltrada =
+                      filtroPrioridad == 'todas'
+                          ? lista
+                          : lista
+                              .where((r) => r.prioridad == filtroPrioridad)
+                              .toList();
+
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: DropdownButton<String>(
+                          value: filtroPrioridad,
+                          onChanged: (valor) {
+                            if (valor != null) {
+                              setState(() {
+                                filtroPrioridad = valor;
+                              });
+                            }
+                          },
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'todas',
+                              child: Text('Todas las prioridades'),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              tooltip: 'Eliminar',
-                              onPressed:
-                                  () => _confirmarBorrado(context, gestor, r),
+                            DropdownMenuItem(
+                              value: 'alta',
+                              child: Text('Alta'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'media',
+                              child: Text('Media'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'baja',
+                              child: Text('Baja'),
                             ),
                           ],
                         ),
-                        onTap: () => _editarDialog(context, gestor, r),
-                      );
-                    },
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: listaFiltrada.length,
+                          itemBuilder: (context, index) {
+                            final r = listaFiltrada[index];
+                            final esCompletado = r.estado == 'completado';
+
+                            return ListTile(
+                              title: Text(
+                                r.titulo,
+                                style: TextStyle(
+                                  decoration:
+                                      esCompletado
+                                          ? TextDecoration.lineThrough
+                                          : TextDecoration.none,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${r.fechaHora.toLocal()}'.split('.')[0] +
+                                    ' — ${calcularTiempoRestante(r.fechaHora)}\nPrioridad: ${r.prioridad.toUpperCase()}',
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      esCompletado
+                                          ? Icons.check_circle_outline
+                                          : Icons.check_circle,
+                                      color:
+                                          esCompletado
+                                              ? Colors.grey
+                                              : Colors.green,
+                                    ),
+                                    tooltip:
+                                        esCompletado
+                                            ? 'Marcar como pendiente'
+                                            : 'Marcar como completado',
+                                    onPressed: () async {
+                                      await gestor.alternarEstado(r);
+                                      if (!esCompletado) {
+                                        await RepositorioHabitos()
+                                            .registrarHabito(r.id, r.titulo);
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              '✅ Hábito registrado',
+                                            ),
+                                          ),
+                                        );
+                                      } else {
+                                        await RepositorioHabitos()
+                                            .eliminarHabito(r.id);
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              '🔄 Marcado como pendiente y hábito eliminado',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    tooltip: 'Eliminar',
+                                    onPressed:
+                                        () => _confirmarBorrado(
+                                          context,
+                                          gestor,
+                                          r,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              onTap: () => _editarDialog(context, gestor, r),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   );
                 },
               );
@@ -121,7 +187,6 @@ class PantallaRecordatorios extends StatelessWidget {
                 icon: const Icon(Icons.mic),
                 label: const Text('Voz Inteligente'),
                 onPressed: () async {
-                  // Invocar servicio de voz
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('🎙️ Escuchando...')),
                   );
@@ -132,7 +197,6 @@ class PantallaRecordatorios extends StatelessWidget {
                     );
                     return;
                   }
-                  // Procesar con OpenAI
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('⏳ Procesando con OpenAI...')),
                   );
@@ -153,6 +217,7 @@ class PantallaRecordatorios extends StatelessWidget {
                       id: '',
                       titulo: titulo,
                       fechaHora: fecha,
+                      prioridad: 'media', // prioridad por defecto
                     );
                     Provider.of<GestorRecordatorios>(
                       context,
@@ -208,6 +273,7 @@ class PantallaRecordatorios extends StatelessWidget {
   void _crearDialog(BuildContext context, GestorRecordatorios gestor) {
     final tituloCtrl = TextEditingController();
     DateTime? seleccionada;
+    String prioridad = 'media'; 
 
     showDialog(
       context: context,
@@ -249,6 +315,19 @@ class PantallaRecordatorios extends StatelessWidget {
                   },
                   child: const Text('Seleccionar fecha y hora'),
                 ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: prioridad,
+                  decoration: const InputDecoration(labelText: 'Prioridad'),
+                  items: const [
+                    DropdownMenuItem(value: 'alta', child: Text('Alta')),
+                    DropdownMenuItem(value: 'media', child: Text('Media')),
+                    DropdownMenuItem(value: 'baja', child: Text('Baja')),
+                  ],
+                  onChanged: (valor) {
+                    if (valor != null) prioridad = valor;
+                  },
+                ),
               ],
             ),
             actions: [
@@ -272,6 +351,7 @@ class PantallaRecordatorios extends StatelessWidget {
                     id: '',
                     titulo: titulo,
                     fechaHora: seleccionada!,
+                    prioridad: prioridad,
                   );
                   gestor.agregar(nuevo);
                   Navigator.pop(context);
@@ -365,41 +445,44 @@ class PantallaRecordatorios extends StatelessWidget {
     );
   }
 
-  void _editarDialog(
-    BuildContext context,
-    GestorRecordatorios gestor,
-    Recordatorio r,
-  ) {
-    final tituloCtrl = TextEditingController(text: r.titulo);
-    DateTime seleccionada = r.fechaHora;
+void _editarDialog(
+  BuildContext context,
+  GestorRecordatorios gestor,
+  Recordatorio r,
+) {
+  final tituloCtrl = TextEditingController(text: r.titulo);
+  DateTime seleccionada = r.fechaHora;
+  String prioridad = r.prioridad.toLowerCase(); // Aseguramos coincidencia exacta
 
-    showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Editar Recordatorio'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: tituloCtrl,
-                  decoration: const InputDecoration(labelText: 'Título'),
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () async {
-                    final nuevaFecha = await showDatePicker(
+  showDialog(
+    context: context,
+    builder: (_) {
+      return StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Editar Recordatorio'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: tituloCtrl,
+                decoration: const InputDecoration(labelText: 'Título'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () async {
+                  final nuevaFecha = await showDatePicker(
+                    context: context,
+                    initialDate: seleccionada,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2100),
+                  );
+                  if (nuevaFecha != null) {
+                    final hora = await showTimePicker(
                       context: context,
-                      initialDate: seleccionada,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime(2100),
+                      initialTime: TimeOfDay.fromDateTime(seleccionada),
                     );
-                    if (nuevaFecha != null) {
-                      final hora = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(seleccionada),
-                      );
-                      if (hora != null) {
+                    if (hora != null) {
+                      setState(() {
                         seleccionada = DateTime(
                           nuevaFecha.year,
                           nuevaFecha.month,
@@ -407,40 +490,63 @@ class PantallaRecordatorios extends StatelessWidget {
                           hora.hour,
                           hora.minute,
                         );
-                      }
+                      });
                     }
-                  },
-                  child: const Text('Editar fecha y hora'),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () {
-                  final titulo = tituloCtrl.text.trim();
-                  if (titulo.isEmpty) return;
-
-                  final actualizado = Recordatorio(
-                    id: r.id,
-                    titulo: titulo,
-                    fechaHora: seleccionada,
-                  );
-                  gestor.editar(actualizado);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('✅ Recordatorio actualizado')),
-                  );
+                  }
                 },
-                child: const Text('Actualizar'),
+                child: const Text('Editar fecha y hora'),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: prioridad,
+                decoration: const InputDecoration(labelText: 'Prioridad'),
+                items: const [
+                  DropdownMenuItem(value: 'alta', child: Text('Alta')),
+                  DropdownMenuItem(value: 'media', child: Text('Media')),
+                  DropdownMenuItem(value: 'baja', child: Text('Baja')),
+                ],
+                onChanged: (valor) {
+                  if (valor != null) {
+                    setState(() {
+                      prioridad = valor;
+                    });
+                  }
+                },
               ),
             ],
           ),
-    );
-  }
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                final titulo = tituloCtrl.text.trim();
+                if (titulo.isEmpty) return;
+
+                final actualizado = Recordatorio(
+                  id: r.id,
+                  titulo: titulo,
+                  fechaHora: seleccionada,
+                  estado: r.estado,
+                  prioridad: prioridad,
+                );
+                gestor.editar(actualizado);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Recordatorio actualizado')),
+                );
+              },
+              child: const Text('Actualizar'),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 
   void _confirmarBorrado(
     BuildContext context,

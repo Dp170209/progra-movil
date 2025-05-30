@@ -7,7 +7,7 @@ import '../repositorios/repositorio_habito.dart';
 class PantallaCrearRecordatorio extends StatefulWidget {
   final int? sugerenciaHora;
   const PantallaCrearRecordatorio({this.sugerenciaHora, Key? key})
-    : super(key: key);
+      : super(key: key);
 
   @override
   _PantallaCrearRecordatorioState createState() =>
@@ -18,20 +18,20 @@ class _PantallaCrearRecordatorioState extends State<PantallaCrearRecordatorio> {
   final _tituloCtrl = TextEditingController();
   late DateTime _fechaSeleccionada;
   bool _cargandoSugerencia = true;
+  String _prioridadSeleccionada = 'media'; // ← Se añadió correctamente
 
   @override
   void initState() {
     super.initState();
     final ahora = DateTime.now();
-    _fechaSeleccionada =
-        widget.sugerenciaHora != null
-            ? DateTime(
-              ahora.year,
-              ahora.month,
-              ahora.day,
-              widget.sugerenciaHora!,
-            )
-            : ahora;
+    _fechaSeleccionada = widget.sugerenciaHora != null
+        ? DateTime(
+            ahora.year,
+            ahora.month,
+            ahora.day,
+            widget.sugerenciaHora!,
+          )
+        : ahora;
 
     _cargarTituloSugerido();
   }
@@ -78,21 +78,22 @@ class _PantallaCrearRecordatorioState extends State<PantallaCrearRecordatorio> {
   void _guardar() {
     final titulo = _tituloCtrl.text.trim();
     if (titulo.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('⚠️ Título obligatorio')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚠️ Título obligatorio')),
+      );
       return;
     }
     final nuevo = Recordatorio(
       id: '',
       titulo: titulo,
       fechaHora: _fechaSeleccionada,
+      prioridad: _prioridadSeleccionada, // ← Se añade prioridad
     );
     Provider.of<GestorRecordatorios>(context, listen: false).agregar(nuevo);
     Navigator.pop(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('✅ Recordatorio creado')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('✅ Recordatorio creado')),
+    );
   }
 
   @override
@@ -115,13 +116,29 @@ class _PantallaCrearRecordatorioState extends State<PantallaCrearRecordatorio> {
                 onPressed: _pickDateTime,
               ),
             ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _prioridadSeleccionada,
+              decoration: const InputDecoration(labelText: 'Prioridad'),
+              onChanged: (valor) {
+                if (valor != null) {
+                  setState(() {
+                    _prioridadSeleccionada = valor;
+                  });
+                }
+              },
+              items: const [
+                DropdownMenuItem(value: 'alta', child: Text('Alta')),
+                DropdownMenuItem(value: 'media', child: Text('Media')),
+                DropdownMenuItem(value: 'baja', child: Text('Baja')),
+              ],
+            ),
             const Spacer(),
             ElevatedButton(
               onPressed: _guardar,
-              child:
-                  _cargandoSugerencia
-                      ? const CircularProgressIndicator()
-                      : const Text('Guardar'),
+              child: _cargandoSugerencia
+                  ? const CircularProgressIndicator()
+                  : const Text('Guardar'),
             ),
           ],
         ),
