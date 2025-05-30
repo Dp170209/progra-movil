@@ -23,13 +23,11 @@ dependencies:
   http: ^0.13.6
   googleapis_auth: ^1.4.1
   fl_chart: ^1.0.0
+  camera: ^0.10.0+1
   path_provider: ^2.0.11
   speech_to_text: ^7.0.0
   flutter_tts: ^3.6.3
   lottie: ^2.2.0
-  camera: ^0.9.8+1
-  tflite_flutter: ^0.9.0
-  tflite_flutter_helper: ^0.2.1
 
 dependency_overrides:
   # Esta versión incluye el namespace en build.gradle
@@ -45,4 +43,6 @@ flutter:
 
   assets:
     - assets/clave_dialogflow.json
-    - assets/confetti.json  
+    - assets/confetti.json   # Asegúrate de tener este JSON en tu carpeta assets
+    - assets/welcome_light.json
+    - assets/welcome_dark.json

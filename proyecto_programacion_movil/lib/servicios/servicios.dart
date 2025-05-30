@@ -1,122 +1,119 @@
 // lib/servicios/servicios.dart
 import 'dart:io';
-import 'dart:math';
-import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:tflite_flutter_helper/tflite_flutter_helper.dart';
-import 'package:image/image.dart' as img;
 
 class ServicioFacial {
   ServicioFacial._();
-  static final instancia = ServicioFacial._();
+  static final ServicioFacial instancia = ServicioFacial._();
 
   final FaceDetector _detector = FaceDetector(
     options: FaceDetectorOptions(
+      enableClassification: false,
       enableLandmarks: true,
       performanceMode: FaceDetectorMode.accurate,
     ),
   );
 
-  late final Interpreter _interpreter;
+  Future<String?> capturarYSubir(File imagen) async {
+    try {
+      print('📷 Analizando imagen en: ${imagen.path}');
+      final input = InputImage.fromFilePath(imagen.path);
+      final rostros = await _detector.processImage(input);
+      print('👤 Rostros detectados: ${rostros.length}');
 
-  Future<void> init() async {
-    _interpreter = await Interpreter.fromAsset('models/facenet.tflite');
-  }
+      if (rostros.isEmpty) {
+        print('⚠️ No se detectó ningún rostro en la imagen');
+        return null;
+      }
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        print('⚠️ Usuario no autenticado');
+        return null;
+      }
+      final storageRef = FirebaseStorage.instance.ref(
+        'perfiles_faciales/$uid.jpg',
+      );
+      final uploadTask = storageRef.putFile(imagen);
+      final snapshot = await uploadTask;
 
-  Future<bool> capturarYRegistrar(File imagen) async {
-    final input = InputImage.fromFilePath(imagen.path);
-    final rostros = await _detector.processImage(input);
-    if (rostros.isEmpty) return false;
-    final bbox = rostros.first.boundingBox;
+      if (snapshot.state == TaskState.success) {
+        final downloadUrl = await snapshot.ref.getDownloadURL();
+        await FirebaseFirestore.instance.collection('usuarios').doc(uid).update(
+          {'fotoPerfil': downloadUrl},
+        );
 
-    final tensorImage = await _preprocesar(imagen, bbox);
-
-    final embedding = _runModel(tensorImage);
-
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-    final ref = FirebaseStorage.instance.ref('perfiles_faciales/$uid.jpg');
-    await ref.putFile(imagen);
-    final url = await ref.getDownloadURL();
-
-    await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
-      'fotoPerfil': url,
-      'faceEmbedding': embedding,
-    }, SetOptions(merge: true));
-
-    return true;
-  }
-
-  Future<bool> verificarRostro(File nuevaImagen, {double umbral = 1.0}) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(user.uid)
-            .get();
-    final stored = doc.data()?['faceEmbedding'] as List<dynamic>?;
-    if (stored == null) return false;
-    final List<double> embeddingRef =
-        stored.map((e) => (e as num).toDouble()).toList();
-    final input = InputImage.fromFilePath(nuevaImagen.path);
-    final rostrosNew = await _detector.processImage(input);
-    if (rostrosNew.isEmpty) return false;
-    final tensorImage = await _preprocesar(
-      nuevaImagen,
-      rostrosNew.first.boundingBox,
-    );
-    final embeddingNew = _runModel(tensorImage);
-
-    double sum = 0;
-    for (int i = 0; i < embeddingRef.length; i++) {
-      final diff = embeddingRef[i] - embeddingNew[i];
-      sum += diff * diff;
+        print('✅ Imagen subida y URL guardada en Firestore');
+        return downloadUrl;
+      } else {
+        print('⚠️ Upload failed, state: ${snapshot.state}');
+        return null;
+      }
+    } on FirebaseException catch (e) {
+      print('🛑 FirebaseException: ${e.code} - ${e.message}');
+      return null;
+    } catch (e) {
+      print('❌ Unexpected error: $e');
+      return null;
     }
-    final distancia = sqrt(sum);
-
-    return distancia < umbral;
   }
 
-  Future<TensorImage> _preprocesar(File file, Rect bbox) async {
-    final bytes = await file.readAsBytes();
-    final original = img.decodeImage(bytes);
-    if (original == null) {
-      throw Exception("No se pudo decodificar la imagen.");
+  Future<bool> verificarRostro(File nuevaImagen) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(user.uid)
+              .get();
+      final refUrl = doc.data()?['fotoPerfil'] as String?;
+      if (refUrl == null) return false;
+
+      final ref = FirebaseStorage.instance.refFromURL(refUrl);
+      final bytes = await ref.getData();
+      if (bytes == null) return false;
+      final tempFile = File('${Directory.systemTemp.path}/${user.uid}_ref.jpg');
+      await tempFile.writeAsBytes(bytes);
+
+      final rostrosRef = await _detector.processImage(
+        InputImage.fromFilePath(tempFile.path),
+      );
+      final rostrosNew = await _detector.processImage(
+        InputImage.fromFilePath(nuevaImagen.path),
+      );
+      if (rostrosRef.isEmpty || rostrosNew.isEmpty) return false;
+
+      if (rostrosRef.isEmpty) {
+        print('❌ No se detectó rostro en la imagen de referencia');
+      }
+      if (rostrosNew.isEmpty) {
+        print('❌ No se detectó rostro en la nueva imagen');
+      }
+
+      // Comparar ángulos y tamaños
+      final f1 = rostrosRef.first;
+      final f2 = rostrosNew.first;
+      final y1 = f1.headEulerAngleY ?? 0.0;
+      final y2 = f2.headEulerAngleY ?? 0.0;
+      final ratioW = (f1.boundingBox.width / f2.boundingBox.width).abs();
+      final ratioH = (f1.boundingBox.height / f2.boundingBox.height).abs();
+      final angleDiff = (y1 - y2).abs();
+
+      print('🧠 Ángulo Y referencia: ${f1.headEulerAngleY}');
+      print('🧠 Ángulo Y nueva: ${f2.headEulerAngleY}');
+      print('📏 Ratio ancho: $ratioW');
+      print('📏 Ratio alto: $ratioH');
+      print('↩️ Diferencia de ángulo: $angleDiff');
+
+      const maxRatio = 1.6;
+      const maxAngle = 25.0;
+      return (ratioW < maxRatio && ratioH < maxRatio && angleDiff < maxAngle);
+    } catch (e) {
+      print('❌ Error en verificarRostro: $e');
+      return false;
     }
-
-    final crop = img.copyCrop(
-      original,
-      bbox.left.toInt().clamp(0, original.width - 1),
-      bbox.top.toInt().clamp(0, original.height - 1),
-      bbox.width.toInt().clamp(0, original.width - bbox.left.toInt()),
-      bbox.height.toInt().clamp(0, original.height - bbox.top.toInt()),
-    );
-
-    final resized = img.copyResize(crop, width: 160, height: 160);
-    final tensorImage = TensorImage.fromImage(resized);
-    final processor =
-        ImageProcessorBuilder().add(NormalizeOp(127.5, 127.5)).build();
-
-    return processor.process(tensorImage);
-  }
-
-  List<double> _runModel(TensorImage image) {
-    final outputShape = [1, 128];
-    final outputBuffer = TensorBuffer.createFixedSize(
-      outputShape,
-      TfLiteType.float32,
-    );
-    _interpreter.run(image.buffer, outputBuffer.buffer);
-    return outputBuffer.getDoubleList();
-  }
-
-  void dispose() {
-    _detector.close();
-    _interpreter.close();
   }
 }
