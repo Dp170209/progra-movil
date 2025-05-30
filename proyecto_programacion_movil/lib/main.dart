@@ -1,9 +1,10 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-
-// Importa tu App que contiene MainApp()
+import 'providers/theme_provider.dart';
+import 'gestores/gestor_recordatorios.dart';
 import 'app.dart';
 
 void main() async {
@@ -11,5 +12,15 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MainApp());
+
+  // Proveedores globales: tema y gestor de recordatorios
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => GestorRecordatorios()),
+      ],
+      child: const MainApp(),
+    ),
+  );
 }

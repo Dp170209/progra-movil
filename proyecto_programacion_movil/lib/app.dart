@@ -1,10 +1,10 @@
+// lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:proyecto_programacion_movil/gestores/gestor_recordatorios.dart';
-import 'package:proyecto_programacion_movil/pantallas/pantalla_crear_recordatorio.dart';
-import 'package:proyecto_programacion_movil/pantallas/pantalla_recordatorio.dart';
+import 'providers/theme_provider.dart';
+import 'gestores/gestor_recordatorios.dart';
 
 // Pantallas
 import 'pantallas/pantalla_login.dart';
@@ -13,51 +13,56 @@ import 'pantallas/pantalla_registro_facial.dart';
 import 'pantallas/pantalla_inicio.dart';
 import 'pantallas/pantalla_sugerencias.dart';
 import 'pantallas/pantalla_resumen.dart';
+import 'pantallas/pantalla_recordatorio.dart';
+import 'pantallas/pantalla_crear_recordatorio.dart';
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => GestorRecordatorios(),
-      child: MaterialApp(
-        title: 'SmartRemind AI',
-        locale: const Locale('es'),
-        supportedLocales: const [Locale('es'), Locale('en')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        theme: ThemeData(
-          primarySwatch: Colors.teal,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
-        initialRoute: '/',
-        routes: {
-          '/': (_) => const _AuthWrapper(),
-          '/login': (_) => const PantallaLogin(),
-          '/registro': (_) => const PantallaRegistro(),
-          '/registro-facial': (_) => const PantallaRegistroFacial(),
-          '/home': (_) => const PantallaInicio(),
-          '/recordatorios': (_) => const PantallaRecordatorios(),
-          '/sugerencias': (_) => const PantallaSugerencias(),
-          '/resumen': (_) => const PantallaResumen(),
-          '/crearRecordatorio': (context) {
-            final args =
-                ModalRoute.of(context)!.settings.arguments
-                    as Map<String, dynamic>?;
-            final sugerenciaHora = args?['sugerenciaHora'] as int?;
-            return PantallaCrearRecordatorio(sugerenciaHora: sugerenciaHora);
-          },
-        },
+    final themeProv = context.watch<ThemeProvider>();
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'SmartRemind AI',
+      locale: const Locale('es'),
+      supportedLocales: const [Locale('es'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      theme: ThemeData(
+        primarySwatch: Colors.teal,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        brightness: Brightness.light,
       ),
+      darkTheme: ThemeData(
+        primarySwatch: Colors.teal,
+        brightness: Brightness.dark,
+      ),
+      themeMode: themeProv.mode,
+      initialRoute: '/',
+      routes: {
+        '/': (_) => const _AuthWrapper(),
+        '/login': (_) => const PantallaLogin(),
+        '/registro': (_) => const PantallaRegistro(),
+        '/registro-facial': (_) => const PantallaRegistroFacial(),
+        '/home': (_) => const PantallaInicio(),
+        '/recordatorios': (_) => const PantallaRecordatorios(),
+        '/sugerencias': (_) => const PantallaSugerencias(),
+        '/resumen': (_) => const PantallaResumen(),
+        '/crearRecordatorio': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          final sugerenciaHora = args?['sugerenciaHora'] as int?;
+          return PantallaCrearRecordatorio(sugerenciaHora: sugerenciaHora);
+        },
+      },
     );
   }
 }
 
-/// Este widget decide si mostramos login o directamente el home
+/// Decide si mostrar login o inicio según autenticación
 class _AuthWrapper extends StatelessWidget {
   const _AuthWrapper();
 
@@ -66,18 +71,12 @@ class _AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Mientras carga el estado:
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        // Si está logueado, vamos al home:
-        if (snapshot.hasData) {
-          return const PantallaInicio();
-        }
-        // Si no, al login:
-        return const PantallaLogin();
+        return snapshot.hasData ? const PantallaInicio() : const PantallaLogin();
       },
     );
   }

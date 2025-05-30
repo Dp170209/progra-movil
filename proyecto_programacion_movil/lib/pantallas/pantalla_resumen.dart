@@ -1,7 +1,4 @@
-// En tu pubspec.yaml asegúrate de tener:
-// flutter_tts: ^3.5.2
-// lottie: ^2.2.0
-
+// lib/pantallas/pantalla_resumen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
@@ -45,6 +42,12 @@ class _PantallaResumenState extends State<PantallaResumen> {
       value: _gestor,
       child: Scaffold(
         appBar: AppBar(title: const Text('Resumen Diario')),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => Navigator.pushNamed(context, '/recordatorios'),
+          icon: const Icon(Icons.add_task),
+          label: const Text('Agregar tarea'),
+        ),
         body: Consumer<GestorRecordatorios>(
           builder: (context, gestor, _) {
             return StreamBuilder<List<Recordatorio>>(
@@ -55,28 +58,23 @@ class _PantallaResumenState extends State<PantallaResumen> {
                 }
                 final todos = snapshot.data ?? [];
                 final total = todos.length;
-                final completados =
-                    todos.where((r) => r.estado == 'completado').length;
+                final completados = todos.where((r) => r.estado == 'completado').length;
                 final pendientes = todos
                     .where((r) => r.estado != 'completado')
-                    .toList();
-                pendientes.sort(
-                    (a, b) => a.fechaHora.compareTo(b.fechaHora));
+                    .toList()
+                  ..sort((a, b) => a.fechaHora.compareTo(b.fechaHora));
                 final urgentes = pendientes.take(3).toList();
+                final progreso = total > 0 ? completados / total : 0.0;
 
-                // Generar texto de resumen
+                // Construir texto para TTS
                 final buffer = StringBuffer();
-                buffer.writeln(
-                    'Hoy completaste $completados de $total tareas.');
+                buffer.writeln('Hoy completaste $completados de $total tareas.');
                 if (urgentes.isNotEmpty) {
                   buffer.writeln(
-                      'Tareas urgentes: ' +
-                          urgentes.map((r) => r.titulo).join(', ') +
-                          '.');
+                      'Tareas urgentes: ' + urgentes.map((r) => r.titulo).join(', ') + '.');
                 }
                 buffer.writeln(
                     'Recomendación: Prioriza las tareas más próximas para mantener el ritmo.');
-                buffer.writeln('');
                 if (pendientes.isEmpty) {
                   buffer.writeln('¡Felicidades! No te quedan pendientes.');
                 } else {
@@ -85,62 +83,112 @@ class _PantallaResumenState extends State<PantallaResumen> {
                 }
                 final resumenTexto = buffer.toString();
 
-                return Stack(
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: ListView(
-                        children: [
-                          Text(
-                            'Resumen Diario',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '• Tareas hechas: $completados/$total',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium,
-                          ),
-                          const SizedBox(height: 12),
-                          if (urgentes.isNotEmpty) ...[
+                    // Confetti si completado
+                    if (total > 0 && completados == total)
+                      Lottie.asset(
+                        'assets/confetti.json',
+                        repeat: false,
+                        height: 150,
+                      ),
+
+                    // Tarjeta de progreso
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              '• Tareas urgentes:',
+                              'Progreso',
                               style: Theme.of(context)
                                   .textTheme
-                                  .titleMedium,
+                                  .headlineSmall,
                             ),
-                            ...urgentes.map(
-                                (r) => Text('  - ${r.titulo}')),
                             const SizedBox(height: 12),
+                            LinearProgressIndicator(
+                              value: progreso,
+                              minHeight: 8,
+                              backgroundColor: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${(progreso * 100).toStringAsFixed(0)}% completado',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
                           ],
-                          Text(
-                            '• Recomendación:',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium,
-                          ),
-                          const Text(
-                              '  Prioriza las tareas más próximas.'),
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.play_arrow),
-                            label: const Text('Escuchar resumen'),
-                            onPressed: () => _leerResumen(resumenTexto),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (total > 0 && completados == total)
-                      Positioned.fill(
-                        child: Lottie.asset(
-                          'assets/confetti.json',
-                          repeat: false,
-                          fit: BoxFit.cover,
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Lista de urgentes
+                    if (urgentes.isNotEmpty)
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('⚠️ Tareas urgentes',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium),
+                              const SizedBox(height: 8),
+                              ...urgentes
+                                  .map((r) => ListTile(
+                                        leading: const Icon(Icons.warning, color: Colors.red),
+                                        title: Text(r.titulo),
+                                        subtitle: Text(
+                                          '${r.fechaHora.toLocal()}'.split('.')[0],
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ))
+                                  .toList(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+
+                    // Recomendación general
+                    Card(
+                      color: Colors.blue.shade50,
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'Recomendación: Prioriza las tareas más próximas para mantener el ritmo.',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Botón TTS
+                    Center(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Escuchar resumen'),
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24)),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 24),
+                        ),
+                        onPressed: () => _leerResumen(resumenTexto),
+                      ),
+                    ),
                   ],
                 );
               },
