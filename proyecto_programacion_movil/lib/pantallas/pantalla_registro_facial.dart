@@ -1,103 +1,15 @@
-// lib/pantallas/pantalla_registro_facial.dart
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../servicios/servicios.dart';
 import 'pantalla_inicio.dart';
+import 'package:provider/provider.dart';
+import '../providers/registro_facial_provider.dart';
 
-/// Pantalla para capturar y registrar la foto de perfil facial.
-class PantallaRegistroFacial extends StatefulWidget {
+class PantallaRegistroFacial extends StatelessWidget {
   const PantallaRegistroFacial({super.key});
 
   @override
-  State<PantallaRegistroFacial> createState() => _PantallaRegistroFacialState();
-}
-
-class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
-  CameraController? _controller;
-  bool _isLoading = false;
-  String _message = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _initCamera();
-  }
-
-  Future<void> _initCamera() async {
-    final cameras = await availableCameras();
-    final front = cameras.firstWhere(
-      (c) => c.lensDirection == CameraLensDirection.front,
-      orElse: () => cameras.first,
-    );
-    _controller = CameraController(
-      front,
-      ResolutionPreset.high,
-      enableAudio: false,
-    );
-    await _controller!.initialize();
-    if (mounted) setState(() {});
-  }
-
-  /// Helper para transición fade
-  Route _fadeRoute(Widget page) {
-    return PageRouteBuilder(
-      transitionDuration: const Duration(milliseconds: 500),
-      pageBuilder:
-          (_, animation, __) => FadeTransition(opacity: animation, child: page),
-    );
-  }
-
-  Future<void> _tomarSelfie() async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-    setState(() {
-      _isLoading = true;
-      _message = '';
-    });
-    try {
-      // Captura la foto
-      final XFile foto = await _controller!.takePicture();
-      final File archivo = File(foto.path);
-
-      // Procesa y sube si hay rostro
-      final url = await ServicioFacial.instancia.capturarYSubir(archivo);
-      if (url == null) {
-        setState(() {
-          _message =
-              '❌ No se detectó rostro o hubo un error al subir la imagen.\nAsegúrate de que haya buena luz y tu rostro esté centrado.';
-        });
-      } else {
-        final uid = FirebaseAuth.instance.currentUser!.uid;
-        await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
-          'fotoPerfil': url,
-        }, SetOptions(merge: true));
-        if (!mounted) return;
-        Navigator.of(
-          context,
-        ).pushReplacement(_fadeRoute(const PantallaInicio()));
-      }
-    } catch (e) {
-      setState(() {
-        _message = 'Error al procesar la imagen: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final prov = context.watch<RegistroFacialProvider>();
     final theme = Theme.of(context);
     return Scaffold(
       body: Container(
@@ -112,15 +24,28 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Vista previa de cámara con overlay guía
               Expanded(
                 child:
-                    _controller == null || !_controller!.value.isInitialized
+                    !prov.initialized
                         ? const Center(child: CircularProgressIndicator())
+                        : (prov.controller == null ||
+                            !prov.controller!.value.isInitialized)
+                        ? Center(
+                          child:
+                              prov.message.isNotEmpty
+                                  ? Text(
+                                    prov.message,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: Colors.redAccent,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  )
+                                  : const CircularProgressIndicator(),
+                        )
                         : Stack(
                           fit: StackFit.expand,
                           children: [
-                            CameraPreview(_controller!),
+                            CameraPreview(prov.controller!),
                             Center(
                               child: Container(
                                 width: 250,
@@ -134,7 +59,7 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
                                 ),
                               ),
                             ),
-                            _message.isEmpty
+                            prov.message.isEmpty
                                 ? Positioned(
                                   bottom:
                                       MediaQuery.of(context).size.height * 0.4,
@@ -152,7 +77,6 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
                           ],
                         ),
               ),
-              // Sección de controles
               Container(
                 decoration: BoxDecoration(
                   color: Colors.black54,
@@ -166,9 +90,9 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
                 ),
                 child: Column(
                   children: [
-                    if (_message.isNotEmpty)
+                    if (prov.message.isNotEmpty)
                       Text(
-                        _message,
+                        prov.message,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.redAccent,
                         ),
@@ -178,10 +102,10 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
                     SizedBox(
                       width: double.infinity,
                       child:
-                          _isLoading
+                          prov.isLoading
                               ? const Center(child: CircularProgressIndicator())
                               : ElevatedButton.icon(
-                                onPressed: _tomarSelfie,
+                                onPressed: () => prov.tomarSelfie(context),
                                 icon: const Icon(Icons.camera_alt, size: 24),
                                 label: const Text('Capturar Selfie'),
                                 style: ElevatedButton.styleFrom(
@@ -197,10 +121,20 @@ class _PantallaRegistroFacialState extends State<PantallaRegistroFacial> {
                     ),
                     const SizedBox(height: 12),
                     TextButton(
-                      onPressed:
-                          () => Navigator.of(
-                            context,
-                          ).pushReplacement(_fadeRoute(const PantallaInicio())),
+                      onPressed: () {
+                        Navigator.of(context).pushReplacement(
+                          PageRouteBuilder(
+                            transitionDuration: const Duration(
+                              milliseconds: 500,
+                            ),
+                            pageBuilder:
+                                (_, animation, __) => FadeTransition(
+                                  opacity: animation,
+                                  child: const PantallaInicio(),
+                                ),
+                          ),
+                        );
+                      },
                       child: const Text('Omitir (más tarde)'),
                     ),
                   ],

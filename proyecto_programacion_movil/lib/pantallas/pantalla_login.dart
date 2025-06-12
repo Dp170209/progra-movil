@@ -1,15 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/login_provider.dart';
-import 'pantalla_registro.dart';
-
-Route _fadeRoute(Widget page) {
-  return PageRouteBuilder(
-    transitionDuration: const Duration(milliseconds: 500),
-    pageBuilder:
-        (_, animation, __) => FadeTransition(opacity: animation, child: page),
-  );
-}
 
 class PantallaLogin extends StatelessWidget {
   const PantallaLogin({super.key});
@@ -112,7 +103,7 @@ class PantallaLogin extends StatelessWidget {
                     onPressed:
                         () => Navigator.of(
                           context,
-                        ).pushReplacement(_fadeRoute(const PantallaRegistro())),
+                        ).pushReplacementNamed('/registro'),
                     child: const Text('¿No tienes cuenta? Regístrate'),
                   ),
                 ],

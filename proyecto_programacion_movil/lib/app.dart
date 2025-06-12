@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:proyecto_programacion_movil/providers/registro_facial_provider.dart';
+import 'package:proyecto_programacion_movil/providers/registro_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/login_provider.dart';
 
@@ -48,8 +50,17 @@ class MainApp extends StatelessWidget {
               create: (_) => LoginProvider(),
               child: const PantallaLogin(),
             ),
-        '/registro': (_) => const PantallaRegistro(),
-        '/registro-facial': (_) => const PantallaRegistroFacial(),
+        '/registro':
+            (_) => ChangeNotifierProvider(
+              create: (_) => RegistroProvider(),
+              child: const PantallaRegistro(),
+            ),
+
+        '/registro-facial':
+            (_) => ChangeNotifierProvider(
+              create: (_) => RegistroFacialProvider(),
+              child: const PantallaRegistroFacial(),
+            ),
         '/home': (_) => const PantallaInicio(),
         '/recordatorios': (_) => const PantallaRecordatorios(),
         '/sugerencias': (_) => const PantallaSugerencias(),
