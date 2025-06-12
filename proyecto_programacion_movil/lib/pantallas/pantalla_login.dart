@@ -1,13 +1,8 @@
-// lib/pantallas/pantalla_login.dart
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart';
-import '../servicios/servicios.dart';
+import 'package:provider/provider.dart';
+import '../providers/login_provider.dart';
 import 'pantalla_registro.dart';
 
-/// Helper para transición fade
 Route _fadeRoute(Widget page) {
   return PageRouteBuilder(
     transitionDuration: const Duration(milliseconds: 500),
@@ -16,93 +11,14 @@ Route _fadeRoute(Widget page) {
   );
 }
 
-class PantallaLogin extends StatefulWidget {
+class PantallaLogin extends StatelessWidget {
   const PantallaLogin({super.key});
 
   @override
-  State<PantallaLogin> createState() => _PantallaLoginState();
-}
-
-class _PantallaLoginState extends State<PantallaLogin> {
-  final _correoCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  bool _cargando = false;
-  String _error = '';
-  bool _tieneRostro = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _verificarRostroRegistrado();
-  }
-
-  Future<void> _verificarRostroRegistrado() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('usuarios')
-              .doc(user.uid)
-              .get();
-      setState(() => _tieneRostro = doc.data()?['fotoPerfil'] != null);
-    }
-  }
-
-  Future<void> _loginEmail() async {
-    setState(() {
-      _cargando = true;
-      _error = '';
-    });
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _correoCtrl.text.trim(),
-        password: _passCtrl.text.trim(),
-      );
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
-    } on FirebaseAuthException catch (e) {
-      setState(() => _error = e.message ?? 'Error desconocido');
-    } catch (e) {
-      setState(() => _error = 'Error: $e');
-    } finally {
-      if (mounted) setState(() => _cargando = false);
-    }
-  }
-
-  Future<void> _loginFacial() async {
-    setState(() {
-      _cargando = true;
-      _error = '';
-    });
-    try {
-      final XFile? foto = await ImagePicker().pickImage(
-        source: ImageSource.camera,
-      );
-      if (foto == null) {
-        setState(() {
-          _error = 'Operación cancelada';
-          _cargando = false;
-        });
-        return;
-      }
-      final File file = File(foto.path);
-      final bool match = await ServicioFacial.instancia.verificarRostro(file);
-      if (match) {
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        setState(() => _error = 'Rostro no reconocido');
-      }
-    } catch (e) {
-      setState(() => _error = 'Error facial: $e');
-    } finally {
-      if (mounted) setState(() => _cargando = false);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final loginProv = context.watch<LoginProvider>();
     final theme = Theme.of(context);
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -127,7 +43,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   Text('Bienvenido', style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: _correoCtrl,
+                    controller: loginProv.correoCtrl,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: 'Correo electrónico',
@@ -139,7 +55,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   ),
                   const SizedBox(height: 12),
                   TextField(
-                    controller: _passCtrl,
+                    controller: loginProv.passCtrl,
                     obscureText: true,
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
@@ -150,16 +66,21 @@ class _PantallaLoginState extends State<PantallaLogin> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  if (_error.isNotEmpty)
-                    Text(_error, style: const TextStyle(color: Colors.red)),
+                  if (loginProv.error.isNotEmpty)
+                    Text(
+                      loginProv.error,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child:
-                        _cargando
+                        loginProv.cargando
                             ? const Center(child: CircularProgressIndicator())
                             : ElevatedButton(
-                              onPressed: _loginEmail,
+                              onPressed: () {
+                                loginProv.loginEmail(context);
+                              },
                               style: ElevatedButton.styleFrom(
                                 shape: const StadiumBorder(),
                                 padding: const EdgeInsets.symmetric(
@@ -169,12 +90,14 @@ class _PantallaLoginState extends State<PantallaLogin> {
                               child: const Text('Iniciar sesión'),
                             ),
                   ),
-                  if (_tieneRostro) ...[
+                  if (loginProv.tieneRostro) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: _loginFacial,
+                        onPressed: () {
+                          loginProv.loginFacial(context);
+                        },
                         icon: const Icon(Icons.face),
                         label: const Text('Iniciar con rostro'),
                         style: ElevatedButton.styleFrom(

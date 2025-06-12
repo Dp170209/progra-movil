@@ -1,11 +1,10 @@
-// lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/login_provider.dart';
 
-// Pantallas
 import 'pantallas/pantalla_login.dart';
 import 'pantallas/pantalla_registro.dart';
 import 'pantallas/pantalla_registro_facial.dart';
@@ -44,7 +43,11 @@ class MainApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (_) => const _AuthWrapper(),
-        '/login': (_) => const PantallaLogin(),
+        '/login':
+            (_) => ChangeNotifierProvider(
+              create: (_) => LoginProvider(),
+              child: const PantallaLogin(),
+            ),
         '/registro': (_) => const PantallaRegistro(),
         '/registro-facial': (_) => const PantallaRegistroFacial(),
         '/home': (_) => const PantallaInicio(),
@@ -63,7 +66,6 @@ class MainApp extends StatelessWidget {
   }
 }
 
-/// Decide si mostrar login o inicio según autenticación
 class _AuthWrapper extends StatelessWidget {
   const _AuthWrapper();
 
@@ -77,9 +79,13 @@ class _AuthWrapper extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        return snapshot.hasData
-            ? const PantallaInicio()
-            : const PantallaLogin();
+        if (!snapshot.hasData) {
+          return ChangeNotifierProvider(
+            create: (_) => LoginProvider(),
+            child: const PantallaLogin(),
+          );
+        }
+        return const PantallaInicio();
       },
     );
   }
