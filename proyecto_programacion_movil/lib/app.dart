@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:proyecto_programacion_movil/gestores/gestor_recordatorios.dart';
+import 'package:proyecto_programacion_movil/providers/crear_recordatorio_provider.dart';
 import 'package:proyecto_programacion_movil/providers/inicio_provider.dart';
 import 'package:proyecto_programacion_movil/providers/registro_facial_provider.dart';
 import 'package:proyecto_programacion_movil/providers/registro_provider.dart';
@@ -84,7 +85,13 @@ class MainApp extends StatelessWidget {
               ModalRoute.of(context)!.settings.arguments
                   as Map<String, dynamic>?;
           final sugerenciaHora = args?['sugerenciaHora'] as int?;
-          return PantallaCrearRecordatorio(sugerenciaHora: sugerenciaHora);
+
+          return ChangeNotifierProvider(
+            create:
+                (_) =>
+                    CrearRecordatorioProvider(sugerenciaHora: sugerenciaHora),
+            child: const PantallaCrearRecordatorio(),
+          );
         },
       },
     );
@@ -110,7 +117,13 @@ class _AuthWrapper extends StatelessWidget {
             child: const PantallaLogin(),
           );
         }
-        return const PantallaInicio();
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => GestorRecordatorios()),
+            ChangeNotifierProvider(create: (_) => InicioProvider()),
+          ],
+          child: const PantallaInicio(),
+        );
       },
     );
   }

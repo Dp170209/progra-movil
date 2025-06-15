@@ -1,147 +1,124 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/crear_recordatorio_provider.dart';
 import '../gestores/gestor_recordatorios.dart';
-import '../modelos/recordatorio.dart';
-import '../repositorios/repositorio_habito.dart';
 
-class PantallaCrearRecordatorio extends StatefulWidget {
+class PantallaCrearRecordatorio extends StatelessWidget {
   final int? sugerenciaHora;
-  const PantallaCrearRecordatorio({this.sugerenciaHora, Key? key})
-      : super(key: key);
+
+  const PantallaCrearRecordatorio({Key? key, this.sugerenciaHora})
+    : super(key: key);
 
   @override
-  _PantallaCrearRecordatorioState createState() =>
-      _PantallaCrearRecordatorioState();
+  Widget build(BuildContext context) {
+    // Aquí asumimos que el provider ya está inyectado desde la ruta
+    return Scaffold(
+      appBar: AppBar(title: const Text('Nuevo Recordatorio')),
+      body: const _Formulario(),
+    );
+  }
 }
 
-class _PantallaCrearRecordatorioState extends State<PantallaCrearRecordatorio> {
-  final _tituloCtrl = TextEditingController();
-  late DateTime _fechaSeleccionada;
-  bool _cargandoSugerencia = true;
-  String _prioridadSeleccionada = 'media'; // ← Se añadió correctamente
+class _Formulario extends StatelessWidget {
+  const _Formulario();
 
-  @override
-  void initState() {
-    super.initState();
-    final ahora = DateTime.now();
-    _fechaSeleccionada = widget.sugerenciaHora != null
-        ? DateTime(
-            ahora.year,
-            ahora.month,
-            ahora.day,
-            widget.sugerenciaHora!,
-          )
-        : ahora;
+  Future<void> _seleccionarFechaHora(BuildContext context) async {
+    final provider = Provider.of<CrearRecordatorioProvider>(
+      context,
+      listen: false,
+    );
+    final fechaActual = provider.fechaSeleccionada;
 
-    _cargarTituloSugerido();
-  }
-
-  Future<void> _cargarTituloSugerido() async {
-    final repo = RepositorioHabitos();
-    final sugerido = await repo.tituloMasRepetido();
-
-    if (sugerido != null && _tituloCtrl.text.trim().isEmpty) {
-      setState(() {
-        _tituloCtrl.text = sugerido;
-      });
-    }
-
-    setState(() {
-      _cargandoSugerencia = false;
-    });
-  }
-
-  Future<void> _pickDateTime() async {
     final fecha = await showDatePicker(
       context: context,
-      initialDate: _fechaSeleccionada,
+      initialDate: fechaActual,
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
     );
     if (fecha == null) return;
+
     final hora = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(_fechaSeleccionada),
+      initialTime: TimeOfDay.fromDateTime(fechaActual),
     );
     if (hora == null) return;
-    setState(() {
-      _fechaSeleccionada = DateTime(
-        fecha.year,
-        fecha.month,
-        fecha.day,
-        hora.hour,
-        hora.minute,
-      );
-    });
+
+    final nuevaFecha = DateTime(
+      fecha.year,
+      fecha.month,
+      fecha.day,
+      hora.hour,
+      hora.minute,
+    );
+    provider.cambiarFecha(nuevaFecha);
   }
 
-  void _guardar() {
-    final titulo = _tituloCtrl.text.trim();
-    if (titulo.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Título obligatorio')),
-      );
+  void _guardar(BuildContext context) {
+    final provider = Provider.of<CrearRecordatorioProvider>(
+      context,
+      listen: false,
+    );
+    if (!provider.esValido()) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('⚠️ Título obligatorio')));
       return;
     }
-    final nuevo = Recordatorio(
-      id: '',
-      titulo: titulo,
-      fechaHora: _fechaSeleccionada,
-      prioridad: _prioridadSeleccionada, // ← Se añade prioridad
-    );
+
+    final nuevo = provider.construirRecordatorio();
     Provider.of<GestorRecordatorios>(context, listen: false).agregar(nuevo);
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Recordatorio creado')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('✅ Recordatorio creado')));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nuevo Recordatorio')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _tituloCtrl,
-              decoration: const InputDecoration(labelText: 'Título'),
+    final prov = context.watch<CrearRecordatorioProvider>();
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          TextField(
+            controller: prov.tituloCtrl,
+            decoration: const InputDecoration(labelText: 'Título'),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            title: Text('${prov.fechaSeleccionada.toLocal()}'.split('.')[0]),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => _seleccionarFechaHora(context),
             ),
-            const SizedBox(height: 16),
-            ListTile(
-              title: Text('${_fechaSeleccionada.toLocal()}'.split('.')[0]),
-              trailing: IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: _pickDateTime,
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _prioridadSeleccionada,
-              decoration: const InputDecoration(labelText: 'Prioridad'),
-              onChanged: (valor) {
-                if (valor != null) {
-                  setState(() {
-                    _prioridadSeleccionada = valor;
-                  });
-                }
-              },
-              items: const [
-                DropdownMenuItem(value: 'alta', child: Text('Alta')),
-                DropdownMenuItem(value: 'media', child: Text('Media')),
-                DropdownMenuItem(value: 'baja', child: Text('Baja')),
-              ],
-            ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: _guardar,
-              child: _cargandoSugerencia
-                  ? const CircularProgressIndicator()
-                  : const Text('Guardar'),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: prov.prioridadSeleccionada,
+            decoration: const InputDecoration(labelText: 'Prioridad'),
+            onChanged: (valor) {
+              if (valor != null) prov.cambiarPrioridad(valor);
+            },
+            items: const [
+              DropdownMenuItem(value: 'alta', child: Text('Alta')),
+              DropdownMenuItem(value: 'media', child: Text('Media')),
+              DropdownMenuItem(value: 'baja', child: Text('Baja')),
+            ],
+          ),
+          const Spacer(),
+          ElevatedButton(
+            onPressed: () => _guardar(context),
+            child:
+                prov.cargandoSugerencia
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : const Text('Guardar'),
+          ),
+        ],
       ),
     );
   }
