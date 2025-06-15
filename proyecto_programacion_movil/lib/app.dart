@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:proyecto_programacion_movil/gestores/gestor_recordatorios.dart';
+import 'package:proyecto_programacion_movil/providers/inicio_provider.dart';
 import 'package:proyecto_programacion_movil/providers/registro_facial_provider.dart';
 import 'package:proyecto_programacion_movil/providers/registro_provider.dart';
 import 'package:proyecto_programacion_movil/providers/sugerencias_provider.dart';
@@ -62,7 +64,14 @@ class MainApp extends StatelessWidget {
               create: (_) => RegistroFacialProvider(),
               child: const PantallaRegistroFacial(),
             ),
-        '/home': (_) => const PantallaInicio(),
+        '/home':
+            (_) => MultiProvider(
+              providers: [
+                ChangeNotifierProvider(create: (_) => GestorRecordatorios()),
+                ChangeNotifierProvider(create: (_) => InicioProvider()),
+              ],
+              child: const PantallaInicio(),
+            ),
         '/recordatorios': (_) => const PantallaRecordatorios(),
         '/sugerencias':
             (_) => ChangeNotifierProvider(
