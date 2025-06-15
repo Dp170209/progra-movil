@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:proyecto_programacion_movil/providers/registro_facial_provider.dart';
 import 'package:proyecto_programacion_movil/providers/registro_provider.dart';
+import 'package:proyecto_programacion_movil/providers/sugerencias_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/login_provider.dart';
 
@@ -63,7 +64,11 @@ class MainApp extends StatelessWidget {
             ),
         '/home': (_) => const PantallaInicio(),
         '/recordatorios': (_) => const PantallaRecordatorios(),
-        '/sugerencias': (_) => const PantallaSugerencias(),
+        '/sugerencias':
+            (_) => ChangeNotifierProvider(
+              create: (_) => SugerenciasProvider(),
+              child: const PantallaSugerencias(),
+            ),
         '/resumen': (_) => const PantallaResumen(),
         '/crearRecordatorio': (context) {
           final args =

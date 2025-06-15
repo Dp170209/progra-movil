@@ -1,49 +1,21 @@
-// lib/ui/pantalla_sugerencias.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../repositorios/repositorio_habito.dart';
+import 'package:provider/provider.dart';
+import '../providers/sugerencias_provider.dart';
 
-class PantallaSugerencias extends StatefulWidget {
+class PantallaSugerencias extends StatelessWidget {
   const PantallaSugerencias({super.key});
 
   @override
-  _PantallaSugerenciasState createState() => _PantallaSugerenciasState();
-}
-
-class _PantallaSugerenciasState extends State<PantallaSugerencias> {
-  Map<int, int> _histograma = {};
-  int? _mejorHora;
-  bool _loading = true;
-  int _tareasHoy = 0;
-  bool _sobrecargado = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarDatos();
-  }
-
-  Future<void> _cargarDatos() async {
-    final repo = RepositorioHabitos();
-    final hist = await repo.conteoPorHora();
-    final mh = await repo.mejorHora();
-    final horaActual = DateTime.now().hour;
-    final tareasHoy = hist[horaActual] ?? 0;
-
-    setState(() {
-      _histograma = hist;
-      _mejorHora = mh;
-      _tareasHoy = tareasHoy;
-      _sobrecargado = tareasHoy > 5;
-      _loading = false;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    final sugerenciasProv = context.watch<SugerenciasProvider>();
+    if (sugerenciasProv.loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final histograma = sugerenciasProv.histograma;
+    final mejorHora = sugerenciasProv.mejorHora;
+    final tareasHoy = sugerenciasProv.tareasHoy;
+    final sobrecargado = sugerenciasProv.sobrecargado;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Sugerencias Inteligentes')),
@@ -58,20 +30,20 @@ class _PantallaSugerenciasState extends State<PantallaSugerencias> {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
-              _buildResumenHoy(),
+              _buildResumenHoy(tareasHoy, sobrecargado),
               const Divider(height: 32),
               Text(
                 'Hábitos por Hora',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              SizedBox(height: 200, child: _buildChartPlaceholder()),
+              SizedBox(height: 200, child: _buildChart(histograma)),
               const Divider(height: 32),
               Text(
                 'Sugerencia Personalizada',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
-              _buildSugerencia(),
+              _buildSugerencia(context, mejorHora),
             ],
           ),
         ),
@@ -79,7 +51,7 @@ class _PantallaSugerenciasState extends State<PantallaSugerencias> {
     );
   }
 
-  Widget _buildResumenHoy() {
+  Widget _buildResumenHoy(int tareasHoy, bool sobrecargado) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
@@ -87,21 +59,21 @@ class _PantallaSugerenciasState extends State<PantallaSugerencias> {
         leading: Icon(
           Icons.task,
           size: 40,
-          color: _sobrecargado ? Colors.red : Colors.green,
+          color: sobrecargado ? Colors.red : Colors.green,
         ),
         title: const Text('Tareas completadas esta hora'),
-        subtitle: Text('$_tareasHoy tareas'),
+        subtitle: Text('$tareasHoy tareas'),
         trailing:
-            _sobrecargado
+            sobrecargado
                 ? const Icon(Icons.warning, color: Colors.red)
                 : const Icon(Icons.check_circle, color: Colors.green),
       ),
     );
   }
 
-  Widget _buildChartPlaceholder() {
+  Widget _buildChart(Map<int, int> histograma) {
     final spots =
-        _histograma.entries
+        histograma.entries
             .map((e) => FlSpot(e.key.toDouble(), e.value.toDouble()))
             .toList();
     return LineChart(
@@ -131,16 +103,16 @@ class _PantallaSugerenciasState extends State<PantallaSugerencias> {
     );
   }
 
-  Widget _buildSugerencia() {
-    if (_mejorHora == null) {
+  Widget _buildSugerencia(BuildContext context, int? mejorHora) {
+    if (mejorHora == null) {
       return const Text('Aún no hay datos suficientes para sugerir.');
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Basado en tu actividad, te sugerimos programar tu tarea a las $_mejorHora:00.',
-          style: TextStyle(fontSize: 16),
+          'Basado en tu actividad, te sugerimos programar tu tarea a las $mejorHora:00.',
+          style: const TextStyle(fontSize: 16),
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
@@ -150,7 +122,7 @@ class _PantallaSugerenciasState extends State<PantallaSugerencias> {
             Navigator.pushNamed(
               context,
               '/crearRecordatorio',
-              arguments: {'sugerenciaHora': _mejorHora},
+              arguments: {'sugerenciaHora': mejorHora},
             );
           },
         ),
