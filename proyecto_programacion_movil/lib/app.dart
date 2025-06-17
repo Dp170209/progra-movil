@@ -62,7 +62,7 @@ class MainApp extends StatelessWidget {
   }
 }
 
-/// Decide si mostrar login o inicio según autenticación
+
 class _AuthWrapper extends StatelessWidget {
   const _AuthWrapper();
 

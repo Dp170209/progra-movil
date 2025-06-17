@@ -11,27 +11,40 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+
+  # Firebase core
   firebase_core: ^3.13.1
   firebase_auth: ^5.5.4
   cloud_firestore: ^5.6.8
-  image_picker: ^1.1.2
-  # Actualizamos a la última versión de Face Detection
-  google_mlkit_face_detection: ^0.13.1    # :contentReference[oaicite:0]{index=0}
   firebase_storage: ^12.4.6
+
+  # UI & State
   provider: ^6.1.1
-  dialogflow_flutter: ^1.0.0
-  http: ^0.13.6
+  http: ^1.2.1
   googleapis_auth: ^1.4.1
-  fl_chart: ^1.0.0
+
+  # Image & Media
+  image_picker: ^0.8.7+4
   camera: ^0.10.0+1
   path_provider: ^2.0.11
-  speech_to_text: ^7.0.0
+
+  # ML & AI
+  google_mlkit_face_detection: ^0.13.1
   flutter_tts: ^3.6.3
+  speech_to_text: ^7.0.0
+
+  # Charts & Animations
+  fl_chart: ^1.0.0
   lottie: ^2.2.0
 
+  # Notifications
+  flutter_local_notifications: ^19.2.1
+  flutter_local_notifications_linux: ^6.0.0
+  timezone: ^0.10.0
+  overlay_support: ^2.0.0
+
 dependency_overrides:
-  # Esta versión incluye el namespace en build.gradle
-  google_mlkit_commons: ^0.11.0          # :contentReference[oaicite:1]{index=1}
+  google_mlkit_commons: ^0.11.0
 
 dev_dependencies:
   flutter_test:
@@ -42,7 +55,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/clave_dialogflow.json
-    - assets/confetti.json   # Asegúrate de tener este JSON en tu carpeta assets
+    - assets/clave_dialogflow.json  
+    - assets/confetti.json
     - assets/welcome_light.json
     - assets/welcome_dark.json
