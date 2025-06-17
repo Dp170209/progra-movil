@@ -33,24 +33,18 @@ class PantallaResumen extends StatelessWidget {
           // Tarjeta de progreso
           Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Progreso',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
+                  Text('Progreso', style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
-                    value: resumenProv.progreso,
-                    minHeight: 8,
-                    backgroundColor: Colors.grey[300],
-                  ),
+                      value: resumenProv.progreso,
+                      minHeight: 8,
+                      backgroundColor: Colors.grey[300]),
                   const SizedBox(height: 8),
                   Text(
                     '${(resumenProv.progreso * 100).toStringAsFixed(0)}% completado',
@@ -62,46 +56,75 @@ class PantallaResumen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Lista de tareas urgentes
-          if (resumenProv.urgentes.isNotEmpty)
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          // Lista de tareas pendientes agrupadas por prioridad
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Tareas pendientes', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  if (resumenProv.pendientes.isEmpty)
                     Text(
-                      '⚠️ Tareas urgentes',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    ...resumenProv.urgentes.map(
-                      (r) => ListTile(
-                        leading: const Icon(Icons.warning, color: Colors.red),
-                        title: Text(r.titulo),
-                        subtitle: Text(
-                          '${r.fechaHora.toLocal()}'.split('.')[0],
-                          style: const TextStyle(fontSize: 12),
+                      '¡Felicidades! No te quedan tareas pendientes.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    )
+                  else ...[
+                    for (var nivel in ['alta', 'media', 'baja'])
+                      if (resumenProv.pendientes.where((r) => r.prioridad == nivel).isNotEmpty) ...[
+                        Text(
+                          nivel.toUpperCase(),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge!
+                              .copyWith(fontWeight: FontWeight.bold),
                         ),
-                      ),
-                    ),
+                        const SizedBox(height: 4),
+                        ...resumenProv.pendientes
+                            .where((r) => r.prioridad == nivel)
+                            .map(
+                              (r) {
+                                Color iconColor;
+                                switch (nivel) {
+                                  case 'alta':
+                                    iconColor = Colors.red;
+                                    break;
+                                  case 'media':
+                                    iconColor = Colors.orange;
+                                    break;
+                                  case 'baja':
+                                  default:
+                                    iconColor = Colors.green;
+                                }
+                                return ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.circle, color: iconColor),
+                                  title: Text(r.titulo),
+                                  subtitle: Text(
+                                    '${r.fechaHora.toLocal()}'.split('.')[0],
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                );
+                              },
+                            )
+                            .toList(),
+                        const SizedBox(height: 12),
+                      ],
                   ],
-                ),
+                ],
               ),
             ),
+          ),
           const SizedBox(height: 24),
 
           // Recomendación general
           Card(
             color: Colors.blue.shade50,
             elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
@@ -118,13 +141,8 @@ class PantallaResumen extends StatelessWidget {
               icon: const Icon(Icons.play_arrow),
               label: const Text('Escuchar resumen'),
               style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 24,
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
               ),
               onPressed: () => resumenProv.leerResumen(),
             ),

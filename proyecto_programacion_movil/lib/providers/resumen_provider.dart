@@ -13,17 +13,13 @@ class ResumenProvider extends ChangeNotifier {
   List<Recordatorio> _todos = [];
 
   ResumenProvider() {
-    // Escucha el stream de recordatorios y notifica cambios
     _sub = _gestor.recordatorios.listen((lista) {
       _todos = lista;
       notifyListeners();
     });
   }
 
-  // Datos crudos
   List<Recordatorio> get allRecordatorios => _todos;
-
-  // Cálculos para la UI
   int get total => _todos.length;
   int get completados =>
       _todos.where((r) => r.estado == 'completado').length;
@@ -32,27 +28,27 @@ class ResumenProvider extends ChangeNotifier {
     list.sort((a, b) => a.fechaHora.compareTo(b.fechaHora));
     return list;
   }
-
-  List<Recordatorio> get urgentes => pendientes.take(3).toList();
-
   double get progreso => total > 0 ? completados / total : 0.0;
 
-  // Texto para TTS
+  /// Genera el texto completo para TTS, incluyendo cada tarea pendiente y su prioridad
   String get textoResumen {
     final buf = StringBuffer();
     buf.writeln('Hoy completaste $completados de $total tareas.');
-    if (urgentes.isNotEmpty) {
-      buf.writeln(
-        'Tareas urgentes: ${urgentes.map((r) => r.titulo).join(', ')}.');
-    }
-    buf.writeln(
-      'Recomendación: Prioriza las tareas más próximas para mantener el ritmo.');
     if (pendientes.isEmpty) {
-      buf.writeln('¡Felicidades! No te quedan pendientes.');
+      buf.writeln('¡Felicidades! No te quedan tareas pendientes.');
     } else {
-      buf.writeln(
-        'Te quedan ${pendientes.length} tarea${pendientes.length > 1 ? 's' : ''} pendientes.');
+      buf.writeln('Tienes ${pendientes.length} tareas pendientes:');
+      for (var r in pendientes) {
+        final nivel = r.prioridad.toLowerCase();
+        final nivelTexto = nivel == 'alta'
+            ? 'Alta'
+            : nivel == 'media'
+                ? 'Media'
+                : 'Baja';
+        buf.writeln('Tarea ${r.titulo} con prioridad $nivelTexto.');
+      }
     }
+    buf.writeln('Recomendación: Prioriza las tareas más próximas para mantener el ritmo.');
     return buf.toString();
   }
 
