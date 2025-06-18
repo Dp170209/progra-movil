@@ -1,10 +1,11 @@
 // lib/providers/recordatorio_provider.dart
 import 'package:flutter/material.dart';
+
 import '../gestores/gestor_recordatorios.dart';
 import '../modelos/recordatorio.dart';
 import '../repositorios/repositorio_habito.dart';
+import '../servicios/servicio_pnl.dart';
 import '../servicios/servicio_voz.dart';
-import '../servicios/servicio_openai.dart';
 
 class RecordatorioProvider extends ChangeNotifier {
   final GestorRecordatorios _gestor = GestorRecordatorios();
@@ -54,13 +55,15 @@ class RecordatorioProvider extends ChangeNotifier {
     await _gestor.alternarEstado(r);
     if (!estabaCompletado) {
       await RepositorioHabitos().registrarHabito(r.id, r.titulo);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Hábito registrado')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('✅ Hábito registrado')));
     } else {
       await RepositorioHabitos().eliminarHabito(r.id);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🔄 Marcado como pendiente y hábito eliminado')),
+        const SnackBar(
+          content: Text('🔄 Marcado como pendiente y hábito eliminado'),
+        ),
       );
     }
   }
@@ -68,36 +71,38 @@ class RecordatorioProvider extends ChangeNotifier {
   // Crear recordatorio manualmente
   Future<void> agregarRecordatorio(BuildContext context, Recordatorio r) async {
     await _gestor.agregar(r);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Recordatorio creado')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('✅ Recordatorio creado')));
   }
 
   // Editar recordatorio existente
   Future<void> editarRecordatorio(BuildContext context, Recordatorio r) async {
     await _gestor.editar(r);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Recordatorio actualizado')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('✅ Recordatorio actualizado')));
   }
 
-  // Crear recordatorio por voz usando OpenAI
+
   Future<void> agregarPorVoz(BuildContext context) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🎙️ Escuchando...')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('🎙️ Escuchando...')));
     final comando = await ServicioVoz.instance.escucharComando();
     if (comando == null || comando.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ No te escuché bien')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('❌ No te escuché bien')));
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('⏳ Procesando con OpenAI...')),
-    );
-    final json = await ServicioOpenAI.instance.procesarFrase(comando);
-    if (json == null || !json.containsKey('titulo') || !json.containsKey('fecha')) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('⏳ Procesando...')));
+    final json = await ServicioPNL.instance.procesarFrase(comando);
+    if (json == null ||
+        !json.containsKey('titulo') ||
+        !json.containsKey('fecha')) {
       await ServicioVoz.instance.hablar('No entendí tu mensaje');
       return;
     }
@@ -112,25 +117,27 @@ class RecordatorioProvider extends ChangeNotifier {
         prioridad: 'media',
       );
       await _gestor.agregar(nuevo);
-      final respuesta = 'Recordatorio "$titulo" para ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')} creado';
+      final respuesta =
+          'Recordatorio "$titulo" para ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')} creado';
       await ServicioVoz.instance.hablar(respuesta);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ $respuesta')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('✅ $respuesta')));
     } catch (e) {
       await ServicioVoz.instance.hablar('La fecha no parece válida');
     }
   }
 
-  // Crear recordatorio por texto libre usando OpenAI
   Future<void> crearPorTexto(BuildContext context, String texto) async {
     if (texto.isEmpty) return;
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('⏳ Procesando con OpenAI...')),
-    );
-    final json = await ServicioOpenAI.instance.procesarFrase(texto);
-    if (json == null || !json.containsKey('titulo') || !json.containsKey('fecha')) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('⏳ Procesando...')));
+    final json = await ServicioPNL.instance.procesarFrase(texto);
+    if (json == null ||
+        !json.containsKey('titulo') ||
+        !json.containsKey('fecha')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('❌ No se entendió el mensaje')),
       );
@@ -142,22 +149,22 @@ class RecordatorioProvider extends ChangeNotifier {
       final titulo = json['titulo'] as String;
       final nuevo = Recordatorio(id: '', titulo: titulo, fechaHora: fecha);
       await _gestor.agregar(nuevo);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Recordatorio creado')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('✅ Recordatorio creado')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Fecha no válida')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('❌ Fecha no válida')));
     }
   }
 
   // Eliminar recordatorio
   void eliminar(BuildContext context, String id) {
     _gestor.eliminar(id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🗑 Recordatorio eliminado')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('🗑 Recordatorio eliminado')));
   }
 
   @override
